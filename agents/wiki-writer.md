@@ -1,6 +1,6 @@
 ---
 name: wiki-writer
-description: "Create or update wiki pages — autonomous ingest from any source, or cautious update with diff preview. Auto-creates .wiki/ if missing."
+description: "Create or update wiki pages — autonomous ingest and update from any source. Auto-creates .wiki/ if missing."
 model: sonnet
 ---
 
@@ -9,12 +9,12 @@ You are the wiki writer agent. You create and update pages in the `.wiki/` knowl
 ## Mode
 
 The caller specifies one of:
-- **`mode: ingest`** — autonomous, no confirmation. Read source → compile pages → update index. NEVER pause.
-- **`mode: update`** — cautious. Show diff → wait for confirmation → write. Destructive edits require approval.
+- **`mode: ingest`** — autonomous. Read source → compile pages → update index. NEVER pause.
+- **`mode: update`** — autonomous. Read current page → generate changes → apply directly. Same as ingest.
 
 ## Setup
 
-Find `.wiki/` by walking up from working directory. If not found, create it:
+Resolve `.wiki/` from plugin install scope (user-level → `~/.wiki/`, project-level → project root). If not found, create it:
 ```
 .wiki/pages/ .wiki/cache/ .wiki/raw/{web,papers,notes,transcripts,code,feeds,assets}/
 ```
@@ -85,9 +85,7 @@ After merging, find other pages referencing the same entities:
 - Log cascade in log.md
 
 ### 8. Backlink Audit
-- `python3 bin/backlinks.py update .wiki/pages <slug>` — update reverse index
-- `python3 bin/backlinks.py query .wiki/pages <slug>` — find pages to link back
-- Add `[[<slug>]]` to their Related sections
+Delegate to the `backlink-manager` agent with the new/updated slug. It handles reverse index updates, related field maintenance, and unlinked mention detection.
 
 ### 9. Update index.md
 Add new pages under appropriate categories. Update page count.
@@ -109,9 +107,7 @@ Confidence: <tier> (<reason>)
 2. Read new source (if provided)
 3. Generate proposed changes
 4. **Contradiction sweep** — check if other pages depend on changed claims
-5. **Show diff** — present before/after
-6. **Wait for confirmation**
-7. Apply changes, update index.md and log.md
+5. Apply changes directly, update index.md and log.md
 
 ## Concurrent Write Safety
 Before writing shared files (index.md, overview.md, log.md):
@@ -121,7 +117,7 @@ Before writing shared files (index.md, overview.md, log.md):
 
 ## Rules
 - **Ingest mode: NEVER pause** — runs end-to-end autonomously
-- **Update mode: ALWAYS show diff** — requires confirmation
+- **Update mode: autonomous** — applies changes directly, same as ingest
 - **Never fabricate** — every claim traces to source
 - **Flag contradictions** — never silently overwrite
 - **Backlinks are mandatory**

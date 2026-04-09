@@ -678,50 +678,83 @@ class WikiStore:
         with self.lock:
             self._refresh_all_internal()
 
-    def get_stale_pages(
-        self, days: int = 90, fast_moving_topics: list[str] | None = None
-    ) -> list[dict[str, Any]]:
-        """
-        Get pages older than N days. Fast-moving topics use a shorter threshold (30 days).
+    # Freshness tiers: tier name → (max_age_minutes, keyword set)
+    FRESHNESS_TIERS = {
+        "live":      (15,          {"stock", "price", "live", "score", "server-status", "deploy"}),
+        "breaking":  (360,         {"breaking", "incident", "outage", "announcement", "release-note"}),
+        "current":   (3 * 1440,    {"news", "current-events", "trending", "election", "market"}),
+        "fast":      (28 * 1440,   {"ai", "llm", "gpt", "claude", "mcp", "agent", "api", "sdk", "model", "benchmark"}),
+        "moderate":  (90 * 1440,   {"version", "release", "software", "framework", "library", "tool"}),
+        "standard":  (180 * 1440,  set()),  # default — 6 months
+        "academic":  (365 * 1440,  {"paper", "research", "study", "theorem", "proof", "algorithm"}),
+        "evergreen": (1825 * 1440, {"history", "biography", "foundational", "principle", "law", "theory"}),
+        "permanent": (None,        {"personal", "note", "idea", "memory", "journal", "diary"}),
+    }
 
-        Args:
-            days: Staleness threshold in days (default 90)
-            fast_moving_topics: Keywords like ['ai', 'llm', 'mcp'] that indicate fast-moving content
+    def get_stale_pages(self) -> list[dict[str, Any]]:
+        """
+        Get stale pages using intelligent freshness tiers.
+
+        Each page's staleness threshold depends on its content type:
+        live=15min, breaking=hours, current=days, fast=weeks,
+        moderate=months, standard=6mo, academic=1yr, evergreen=5yr, permanent=never.
+
+        Resolution: explicit freshness_tier frontmatter > auto-classification from content.
 
         Returns:
-            List of stale pages with full metadata
+            List of stale pages with full metadata and tier info
         """
         with self.lock:
             cursor = self.db.cursor()
-            cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
-            fast_cutoff_date = (datetime.now() - timedelta(days=30)).isoformat()
+            now = datetime.now()
 
-            # Get all pages with their metadata
             cursor.execute("SELECT * FROM pages ORDER BY updated_at ASC")
             all_pages = [dict(row) for row in cursor.fetchall()]
 
             stale_pages = []
             for page in all_pages:
                 updated_at = page.get("updated_at", "")
-                title = page.get("title", "").lower()
-                content = page.get("content_md", "").lower()
+                if not updated_at:
+                    continue
 
-                # Check if page matches fast-moving topics
-                is_fast_moving = False
-                if fast_moving_topics:
-                    for topic in fast_moving_topics:
-                        if topic.lower() in title or topic.lower() in content:
-                            is_fast_moving = True
-                            break
+                try:
+                    updated_dt = datetime.fromisoformat(updated_at)
+                except (ValueError, TypeError):
+                    continue
 
-                # Determine staleness threshold
-                threshold = fast_cutoff_date if is_fast_moving else cutoff_date
+                age_minutes = (now - updated_dt).total_seconds() / 60
+                tier_name, max_age = self._classify_tier(page)
 
-                # Page is stale if older than threshold
-                if updated_at < threshold:
+                if max_age is None:  # permanent — never stale
+                    continue
+
+                if age_minutes > max_age:
+                    page["freshness_tier"] = tier_name
+                    page["max_age_days"] = round(max_age / 1440, 1)
                     stale_pages.append(page)
 
             return stale_pages
+
+    def _classify_tier(self, page: dict) -> tuple[str, int | None]:
+        """Classify a page into a freshness tier. Returns (tier_name, max_age_minutes)."""
+        # Check explicit freshness_tier in frontmatter
+        content = page.get("content_md", "")
+        import re as _re
+        fm_match = _re.search(r"^freshness_tier:\s*(\S+)", content, _re.MULTILINE)
+        if fm_match:
+            tier = fm_match.group(1).strip().strip('"').strip("'")
+            if tier in self.FRESHNESS_TIERS:
+                return tier, self.FRESHNESS_TIERS[tier][0]
+
+        # Auto-classify from content
+        text = f"{page.get('title', '')} {content}".lower()
+        for tier_name, (max_age, keywords) in self.FRESHNESS_TIERS.items():
+            if not keywords:
+                continue
+            if any(kw in text for kw in keywords):
+                return tier_name, max_age
+
+        return "standard", self.FRESHNESS_TIERS["standard"][0]
 
     def add_annotation(
         self,

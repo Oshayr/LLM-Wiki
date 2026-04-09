@@ -1,5 +1,5 @@
 ---
-name: view
+name: wiki-view
 description: "Wiki dashboard — browse pages, view stats, knowledge graph, export. Use on: 'wiki dashboard', 'wiki stats', 'show wiki', 'wiki pages', 'list wiki', 'wiki graph', 'export wiki', 'wiki overview'."
 ---
 
@@ -7,19 +7,19 @@ description: "Wiki dashboard — browse pages, view stats, knowledge graph, expo
 
 Dashboard, graph visualization, stats, and export for the wiki.
 
-Find `.wiki/` by walking up from working directory. If not found, say "No wiki found."
+Resolve `.wiki/` from plugin install scope (user-level → `~/.wiki/`, project-level → project root). If not found, say "No wiki found."
 
 ## Arguments
 
-- **`/view`** — dashboard summary (page count, recent activity, top topics)
-- **`/view pages`** — list all pages grouped by type
-- **`/view stats`** — detailed statistics (page count, links, confidence distribution, stale %)
-- **`/view graph`** — knowledge graph visualization (Mermaid diagram)
-- **`/view graph <slug>`** — graph centered on a specific page (2-hop neighborhood)
-- **`/view export html`** — export entire wiki as single HTML file
-- **`/view export md`** — export as single markdown bundle
-- **`/view export json`** — export as JSON knowledge graph (nodes + edges)
-- **`/view artifacts <type>`** — generate study guide, timeline, glossary, or comparison table
+- **`/wiki-view`** — dashboard summary (page count, recent activity, top topics)
+- **`/wiki-view pages`** — list all pages grouped by type
+- **`/wiki-view stats`** — detailed statistics (page count, links, confidence distribution, stale %)
+- **`/wiki-view graph`** — knowledge graph visualization (Mermaid diagram)
+- **`/wiki-view graph <slug>`** — graph centered on a specific page (2-hop neighborhood)
+- **`/wiki-view export html`** — export entire wiki as single HTML file
+- **`/wiki-view export md`** — export as single markdown bundle
+- **`/wiki-view export json`** — export as JSON knowledge graph (nodes + edges)
+- **`/wiki-view artifacts <type>`** — generate study guide, timeline, glossary, or comparison table
 
 ## Dashboard
 
@@ -46,7 +46,7 @@ Read all pages, extract `[[wiki-links]]` and `related:` fields:
 ## Artifacts
 
 Generate derivative documents from wiki content:
-- **`/view artifacts study-guide <topic>`** — structured study guide from topic cluster
-- **`/view artifacts timeline <topic>`** — chronological timeline of events/developments
-- **`/view artifacts glossary`** — terms and definitions from all pages
-- **`/view artifacts compare <slug1> <slug2>`** — side-by-side comparison table
+- **`/wiki-view artifacts study-guide <topic>`** — structured study guide from topic cluster
+- **`/wiki-view artifacts timeline <topic>`** — chronological timeline of events/developments
+- **`/wiki-view artifacts glossary`** — terms and definitions from all pages
+- **`/wiki-view artifacts compare <slug1> <slug2>`** — side-by-side comparison table

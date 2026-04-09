@@ -1,18 +1,18 @@
 ---
-name: serve
-description: "Start the wiki web server — browsable Wikipedia-style UI with live research, split-pane editor, AI assist, and themes. Manual trigger only: /wiki-serve, /serve, 'start wiki server', 'browse the wiki'."
+name: wiki-serve
+description: "Start the wiki web server — browsable Wikipedia-style UI with live research, split-pane editor, AI assist, and themes. Manual trigger only: /wiki-serve, 'start wiki server', 'browse the wiki'."
 ---
 
 # Serve
 
 Launch a local web server that presents the wiki as a browsable, Wikipedia-style website with live background research, integrated chat, and a split-pane editor with AI assist.
 
-Find `.wiki/` by walking up from working directory. If not found, auto-create it.
+Resolve `.wiki/` from plugin install scope (user-level → `~/.wiki/`, project-level → project root). Auto-create if missing.
 
 ## Arguments
 
-- **`/serve`** — start the server (default port 8420)
-- **`/serve stop`** — stop the running server
+- **`/wiki-serve`** — start the server (default port 8420)
+- **`/wiki-serve stop`** — stop the running server
 
 ## Startup
 
@@ -45,5 +45,5 @@ Find `.wiki/` by walking up from working directory. If not found, auto-create it
 ## Stop
 
 Kill the server process on port 8420. Either:
-- `/serve stop`
+- `/wiki-serve stop`
 - The server auto-stops when the session ends (daemon process)

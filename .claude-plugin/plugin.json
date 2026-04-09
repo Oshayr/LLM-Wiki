@@ -18,6 +18,7 @@
     "claude-code"
   ],
   "agents": [
+    "agents/backlink-manager.md",
     "agents/citation-explorer.md",
     "agents/fact-checker.md",
     "agents/research-loop.md",
@@ -31,7 +32,6 @@
   "skills": [
     "skills/maintain/SKILL.md",
     "skills/read/SKILL.md",
-    "skills/research/SKILL.md",
     "skills/serve/SKILL.md",
     "skills/view/SKILL.md",
     "skills/write/SKILL.md"

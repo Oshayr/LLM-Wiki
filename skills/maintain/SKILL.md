@@ -1,5 +1,5 @@
 ---
-name: maintain
+name: wiki-maintain
 description: "Wiki maintenance — lint broken links, merge near-duplicates, upgrade confidence, flag stale pages, gap analysis, concept synthesis. Use on: 'wiki maintenance', 'wiki cleanup', 'fix wiki', 'wiki health', 'check wiki', 'consolidate wiki'."
 ---
 
@@ -7,14 +7,14 @@ description: "Wiki maintenance — lint broken links, merge near-duplicates, upg
 
 Comprehensive wiki maintenance: lint, deduplicate, upgrade, and analyze.
 
-Find `.wiki/` by walking up from working directory. If not found, say "No wiki found."
+Resolve `.wiki/` from plugin install scope (user-level → `~/.wiki/`, project-level → project root). If not found, say "No wiki found."
 
 ## Arguments
 
-- **`/maintain`** — run full maintenance (all steps below)
-- **`/maintain lint`** — only fix broken links, missing frontmatter, orphans
-- **`/maintain dedup`** — only find and merge near-duplicate pages
-- **`/maintain gaps`** — only analyze knowledge gaps and missing coverage
+- **`/wiki-maintain`** — run full maintenance (all steps below)
+- **`/wiki-maintain lint`** — only fix broken links, missing frontmatter, orphans
+- **`/wiki-maintain dedup`** — only find and merge near-duplicate pages
+- **`/wiki-maintain gaps`** — only analyze knowledge gaps and missing coverage
 
 ## Full Maintenance Steps
 
@@ -42,9 +42,23 @@ Pages with 3+ independent sources in frontmatter get upgraded:
 
 ### 4. Stale Detection
 
-Pages with `updated:` date >90 days old:
-- Add `stale: true` to frontmatter
-- Suggest running `/research refresh <slug>` for fast-moving topics
+Pages are flagged based on their freshness tier:
+
+| Tier | TTL | Matches |
+|------|-----|---------|
+| live | 15 min | stock prices, server status, deployment state |
+| breaking | 1-6 hours | breaking news, incident updates, announcements |
+| current | 1-3 days | news articles, current events, trending |
+| fast | 1-4 weeks | AI/LLM/MCP, API changes, benchmarks |
+| moderate | 1-3 months | software versions, frameworks, libraries |
+| standard | 6 months | general knowledge (default) |
+| academic | 1 year | research papers, studies |
+| evergreen | 5 years | history, foundational concepts |
+| permanent | never | personal notes, ideas, memories |
+
+Resolution: (1) explicit `freshness_tier:` in frontmatter, (2) explicit `ttl:` in frontmatter (e.g. `ttl: 30m`, `ttl: 2d`), (3) auto-classification from tags/type/content keywords.
+
+For stale pages: add `stale: true` to frontmatter, suggest `/wiki-read deep <slug>` for fast-moving topics.
 
 ### 5. Concept Auto-Generation
 

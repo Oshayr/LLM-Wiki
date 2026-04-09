@@ -20,7 +20,69 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 
-FAST_MOVING_KEYWORDS = {"ai", "llm", "gpt", "claude", "mcp", "agent", "api", "sdk"}
+# Freshness tiers: tier name → (max_age_minutes, keyword set)
+# Resolution: explicit frontmatter > auto-classification from content keywords
+FRESHNESS_TIERS = {
+    "live":      (15,          {"stock", "price", "live", "score", "server-status", "deploy", "deployment"}),
+    "breaking":  (360,         {"breaking", "incident", "outage", "announcement", "release-note"}),
+    "current":   (3 * 1440,    {"news", "current-events", "trending", "election", "market"}),
+    "fast":      (28 * 1440,   {"ai", "llm", "gpt", "claude", "mcp", "agent", "api", "sdk", "model", "benchmark"}),
+    "moderate":  (90 * 1440,   {"version", "release", "software", "framework", "library", "tool", "package"}),
+    "standard":  (180 * 1440,  set()),  # default — 6 months
+    "academic":  (365 * 1440,  {"paper", "research", "study", "theorem", "proof", "algorithm", "journal"}),
+    "evergreen": (1825 * 1440, {"history", "biography", "foundational", "principle", "law", "theory", "philosophy"}),
+    "permanent": (None,        {"personal", "note", "idea", "memory", "journal", "diary", "dream"}),
+}
+
+
+def classify_freshness_tier(page: dict) -> tuple[str, int | None]:
+    """Classify a page's freshness tier and return (tier_name, max_age_minutes).
+
+    Resolution order:
+    1. Explicit `freshness_tier:` in frontmatter
+    2. Explicit `ttl:` in frontmatter (e.g. '30m', '2d', '1h')
+    3. Auto-classification from tags, type, and content keywords
+    """
+    # 1. Explicit freshness_tier in frontmatter
+    fm_tier = page.get("freshness_tier", "")
+    if fm_tier and fm_tier in FRESHNESS_TIERS:
+        max_age, _ = FRESHNESS_TIERS[fm_tier]
+        return fm_tier, max_age
+
+    # 2. Explicit ttl in frontmatter (e.g. '30m', '2d', '6h', '1y')
+    ttl_str = page.get("ttl", "")
+    if ttl_str:
+        ttl_minutes = _parse_ttl(ttl_str)
+        if ttl_minutes is not None:
+            return "custom", ttl_minutes
+
+    # 3. Auto-classify from content keywords
+    content_lower = page.get("content_lower", "")
+    page_type = page.get("type", "").lower()
+    tags_str = page.get("tags", "").lower()
+    text_to_scan = f"{content_lower} {page_type} {tags_str}"
+
+    for tier_name, (max_age, keywords) in FRESHNESS_TIERS.items():
+        if not keywords:
+            continue  # skip 'standard' (no keywords — it's the default)
+        if any(kw in text_to_scan for kw in keywords):
+            return tier_name, max_age
+
+    # Default: standard
+    max_age, _ = FRESHNESS_TIERS["standard"]
+    return "standard", max_age
+
+
+def _parse_ttl(ttl_str: str) -> int | None:
+    """Parse a TTL string like '30m', '2d', '6h', '1y' into minutes."""
+    import re as _re
+    m = _re.match(r"(\d+)\s*([mhdwy])", ttl_str.strip().lower())
+    if not m:
+        return None
+    value = int(m.group(1))
+    unit = m.group(2)
+    multipliers = {"m": 1, "h": 60, "d": 1440, "w": 10080, "y": 525600}
+    return value * multipliers.get(unit, 1440)
 
 
 def _load_pages(pages_dir: Path) -> list[dict]:
@@ -57,6 +119,9 @@ def _load_pages(pages_dir: Path) -> list[dict]:
             "type": fm.get("type", ""),
             "confidence": fm.get("confidence", ""),
             "updated": fm.get("updated", ""),
+            "freshness_tier": fm.get("freshness_tier", ""),
+            "ttl": fm.get("ttl", ""),
+            "tags": fm.get("tags", ""),
             "word_count": word_count,
             "links_out": links,
             "content_lower": content.lower(),
@@ -160,7 +225,7 @@ def analyze_depth(pages_dir: Path) -> list[dict]:
 
 
 def analyze_freshness(pages_dir: Path) -> list[dict]:
-    """Find freshness gaps — stale pages, especially in fast-moving topics."""
+    """Find freshness gaps — stale pages based on intelligent freshness tiers."""
     pages = _load_pages(pages_dir)
     now = datetime.now()
     gaps = []
@@ -175,22 +240,25 @@ def analyze_freshness(pages_dir: Path) -> list[dict]:
         except ValueError:
             continue
 
-        age_days = (now - updated_dt).days
+        age_minutes = (now - updated_dt).total_seconds() / 60
+        age_days = age_minutes / 1440
 
-        # Check if fast-moving topic
-        is_fast = any(kw in p["content_lower"] for kw in FAST_MOVING_KEYWORDS)
-        threshold = 30 if is_fast else 90
+        tier_name, max_age_minutes = classify_freshness_tier(p)
 
-        if age_days > threshold:
+        # permanent tier = never stale
+        if max_age_minutes is None:
+            continue
+
+        if age_minutes > max_age_minutes:
             gaps.append({
                 "type": "stale_content",
                 "slug": p["slug"],
                 "title": p["title"],
                 "updated": updated,
-                "age_days": age_days,
-                "fast_moving": is_fast,
-                "suggestion": f"Last updated {age_days}d ago"
-                + (" (fast-moving topic)" if is_fast else ""),
+                "age_days": round(age_days, 1),
+                "freshness_tier": tier_name,
+                "max_age_days": round(max_age_minutes / 1440, 1),
+                "suggestion": f"Last updated {round(age_days)}d ago — tier '{tier_name}' (max {round(max_age_minutes / 1440)}d)",
             })
 
     gaps.sort(key=lambda g: g["age_days"], reverse=True)

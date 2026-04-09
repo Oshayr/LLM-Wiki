@@ -31,11 +31,15 @@ for arg in sys.argv:
         WIKI_DIR = Path(sys.argv[sys.argv.index(arg) + 1])
 
 if not WIKI_DIR:
-    # Try to find .wiki in common locations
-    for candidate in [Path(".wiki"), Path("../.wiki"), Path.home() / ".wiki"]:
-        if candidate.exists():
-            WIKI_DIR = candidate
-            break
+    # Resolve from plugin install scope:
+    # If plugin is under ~/.claude/ (user-level), wiki is at ~/.wiki/
+    # Otherwise, wiki is at project root .wiki/
+    plugin_root = Path(__file__).parent.parent.resolve()
+    home = Path.home()
+    if str(plugin_root).startswith(str(home / ".claude")):
+        WIKI_DIR = home / ".wiki"
+    else:
+        WIKI_DIR = Path(".wiki")
 
 mcp = FastMCP(
     "LLM Wiki",
