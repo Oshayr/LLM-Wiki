@@ -235,7 +235,8 @@ class CodeSearcher:
         if search_type in ("qa", "all"):
             results.extend(self.search_stackoverflow(query, top))
 
-        # Return top N
+        # Sort by stars/score descending, then return top N
+        results.sort(key=lambda r: r.get("stars", r.get("score", 0)), reverse=True)
         return results[:top]
 
     def get_npm_info(self, package_name: str) -> dict[str, Any] | None:

@@ -45,9 +45,12 @@ Inspired by [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpath
 ```bash
 # Clone into your Claude Code plugins directory
 git clone https://github.com/Oshayr/llm-wiki .claude/plugins/llm-wiki
+
+# Install dependencies (web server + MCP server)
+pip install -r .claude/plugins/llm-wiki/requirements.txt
 ```
 
-No setup required. The `.wiki/` data directory is created automatically on first use.
+No further setup required. The `.wiki/` data directory is created automatically on first use.
 
 ### Optional: Semantic Search
 
@@ -58,6 +61,10 @@ pip install onnxruntime tokenizers numpy sqlite-vec
 ```
 
 The embedding model (~23MB ONNX) downloads automatically on first use. No PyTorch required.
+
+### Verify Installation
+
+After installing, restart Claude Code. The plugin provides 6 slash commands (`/write`, `/read`, `/research`, `/serve`, `/maintain`, `/view`) and 9 agents that activate automatically based on context.
 
 ## Skills
 

@@ -1,4 +1,5 @@
 ---
+name: fact-checker
 model: sonnet
 tools:
   - Bash
@@ -30,7 +31,7 @@ You verify factual claims in wiki pages against external sources. You are thorou
    - Assign status: `verified`, `unverified`, `disputed`, `outdated`
 4. **Record results** using `bin/claims.py`:
    ```
-   python3 ${PLUGIN_ROOT}/bin/claims.py extract <slug>
+   python3 bin/claims.py extract .wiki/pages <slug>
    ```
 5. **Update the page** — if verification reveals errors, flag them in the page content using contradiction markers
 

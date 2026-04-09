@@ -330,6 +330,7 @@ class EmbeddingIndex:
 
                 now = datetime.now(UTC).isoformat()
                 page_embeddings = []
+                full_content_hash = self._content_hash(content)
 
                 for chunk in chunks:
                     text_for_embed = chunk["text"]
@@ -340,7 +341,7 @@ class EmbeddingIndex:
 
                     embedding = embed_text(text_for_embed)
                     emb_bytes = embed_to_bytes(embedding)
-                    content_hash = self._content_hash(chunk["text"])
+                    content_hash = full_content_hash
 
                     conn.execute(
                         """INSERT OR REPLACE INTO chunks

@@ -444,10 +444,11 @@ class HTMLExporter:
         # Build sidebar
         sidebar_html = '<input type="text" class="search-box" id="search" placeholder="Search pages...">'
         for page_type in sorted(pages_by_type.keys()):
-            sidebar_html += f"<h2>{page_type.title()}</h2>\n<ul>\n"
+            sidebar_html += f"<h2>{self._escape_html(page_type.title())}</h2>\n<ul>\n"
             for slug in pages_by_type[page_type]:
                 title = self.parser.metadata.get(slug, {}).get("title", slug)
-                sidebar_html += f'<li><a href="#{slug}" onclick="showPage(\'{slug}\')">{title}</a></li>\n'
+                safe_slug = self._escape_html(slug).replace("'", "\\'")
+                sidebar_html += f'<li><a href="#{self._escape_html(slug)}" onclick="showPage(\'{safe_slug}\')">{self._escape_html(title)}</a></li>\n'
             sidebar_html += "</ul>\n"
 
         # Build main content
@@ -543,7 +544,8 @@ class HTMLExporter:
         def replace_link(match):
             slug = match.group(1).strip()
             label = slug.replace("-", " ").title()
-            return f'<a href="#{slug}" onclick="showPage(\'{slug}\')">{label}</a>'
+            safe_slug = self._escape_html(slug).replace("'", "\\'")
+            return f'<a href="#{self._escape_html(slug)}" onclick="showPage(\'{safe_slug}\')">{self._escape_html(label)}</a>'
 
         return self.parser.LINK_PATTERN.sub(replace_link, content)
 

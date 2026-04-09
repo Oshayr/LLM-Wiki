@@ -254,21 +254,21 @@ class FlashcardDB:
             interval = timedelta(minutes=10)
             state = "relearning"
         elif rating == 2:  # Hard
+            interval = timedelta(days=max(1, stability * 0.8))
             stability = stability * 1.2
             difficulty = min(1.0, difficulty + 0.05)
-            interval = timedelta(days=max(1, stability * 0.8))
             reps += 1
             state = "review"
         elif rating == 3:  # Good
+            interval = timedelta(days=max(1, stability))
             stability = stability * 2.5
             difficulty = max(0.0, difficulty - 0.02)
-            interval = timedelta(days=max(1, stability))
             reps += 1
             state = "review"
         else:  # Easy (4)
+            interval = timedelta(days=max(1, stability * 1.3))
             stability = stability * 3.5
             difficulty = max(0.0, difficulty - 0.05)
-            interval = timedelta(days=max(1, stability * 1.3))
             reps += 1
             state = "review"
 

@@ -1,4 +1,5 @@
 ---
+name: citation-explorer
 model: sonnet
 tools:
   - Bash

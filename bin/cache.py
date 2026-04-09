@@ -96,18 +96,20 @@ def compute_query_hash(query):
 
 
 def parse_iso_datetime(iso_string):
-    """Parse ISO 8601 datetime string and return as naive UTC datetime."""
-    # Remove Z suffix if present
+    """Parse ISO 8601 datetime string and return as timezone-aware UTC datetime."""
+    # Remove Z suffix and replace with +00:00
     if iso_string.endswith("Z"):
-        iso_string = iso_string[:-1]
+        iso_string = iso_string[:-1] + "+00:00"
 
-    # Handle timezone offset
-    if "+" in iso_string:
-        iso_string = iso_string.split("+")[0]
+    # Handle timezone offset — strip and assume UTC
+    if "+" in iso_string[10:]:
+        iso_string = iso_string.split("+")[0] + "+00:00"
     elif iso_string.count("-") > 2:  # Has timezone offset like -08:00
-        iso_string = iso_string.rsplit("-", 1)[0]
+        iso_string = iso_string.rsplit("-", 1)[0] + "+00:00"
+    else:
+        # No timezone info — assume UTC
+        iso_string = iso_string + "+00:00"
 
-    # Parse as naive UTC datetime
     return datetime.fromisoformat(iso_string)
 
 

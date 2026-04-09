@@ -477,7 +477,9 @@ class WikiStore:
 
             self.db.commit()
 
-        # Delete the markdown file
+        # Delete the markdown file (validate slug to prevent path traversal)
+        if not re.fullmatch(r"[a-z0-9][a-z0-9._-]*", slug) or ".." in slug:
+            return False
         md_path = self.wiki_dir / "pages" / f"{slug}.md"
         if md_path.exists():
             md_path.unlink()
