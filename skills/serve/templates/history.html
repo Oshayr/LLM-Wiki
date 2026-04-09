@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}History: {{ page.title }}{% endblock %}
+{% block content %}
+<div class="wiki-page-content">
+    <h1>History: {{ page.title }}</h1>
+    <p><a href="/wiki/{{ page.slug }}">Return to {{ page.title }}</a></p>
+
+    {% if history %}
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Commit</th>
+                    <th>Date</th>
+                    <th>Message</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in history %}
+                    <tr>
+                        <td><span class="commit-hash">{{ item.hash[:7] }}</span></td>
+                        <td>{{ item.date }}</td>
+                        <td>{{ item.message }}</td>
+                        <td>
+                            <button class="wiki-btn wiki-btn-small wiki-diff-btn" data-hash="{{ item.hash }}" data-slug="{{ page.slug }}">Diff</button>
+                        </td>
+                    </tr>
+                    <tr class="diff-row" id="diff-{{ item.hash }}" style="display:none;">
+                        <td colspan="4">
+                            <pre class="wiki-diff-content"></pre>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No version history available for this page.</p>
+    {% endif %}
+</div>
+
+<script>
+// Diff viewer: git diff coloring uses safe DOM methods (no raw innerHTML)
+function escapeAndColor(diffText) {
+    var pre = document.createElement('pre');
+    pre.className = 'wiki-diff-content';
+    var lines = diffText.split('\n');
+    lines.forEach(function(line) {
+        var span = document.createElement('span');
+        span.textContent = line;
+        if (line.startsWith('+') && !line.startsWith('+++')) {
+            span.className = 'diff-add';
+        } else if (line.startsWith('-') && !line.startsWith('---')) {
+            span.className = 'diff-del';
+        } else if (line.startsWith('@@')) {
+            span.className = 'diff-hunk';
+        }
+        pre.appendChild(span);
+        pre.appendChild(document.createTextNode('\n'));
+    });
+    return pre;
+}
+
+document.querySelectorAll('.wiki-diff-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var hash = this.getAttribute('data-hash');
+        var slug = this.getAttribute('data-slug');
+        var row = document.getElementById('diff-' + hash);
+        var container = row.querySelector('td');
+
+        if (row.style.display === 'none') {
+            if (!row.dataset.loaded) {
+                container.textContent = '';
+                var loadingPre = document.createElement('pre');
+                loadingPre.className = 'wiki-diff-content';
+                loadingPre.textContent = 'Loading diff...';
+                container.appendChild(loadingPre);
+                row.style.display = '';
+
+                fetch('/api/wiki/' + slug + '/diff/' + hash)
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        container.textContent = '';
+                        if (data.diff) {
+                            container.appendChild(escapeAndColor(data.diff));
+                            row.dataset.loaded = 'true';
+                        } else {
+                            var errPre = document.createElement('pre');
+                            errPre.textContent = data.error || 'No diff available';
+                            container.appendChild(errPre);
+                        }
+                    })
+                    .catch(function(e) {
+                        container.textContent = '';
+                        var errPre = document.createElement('pre');
+                        errPre.textContent = 'Error: ' + e;
+                        container.appendChild(errPre);
+                    });
+            } else {
+                row.style.display = '';
+            }
+            this.textContent = 'Hide';
+        } else {
+            row.style.display = 'none';
+            this.textContent = 'Diff';
+        }
+    });
+});
+</script>
+{% endblock %}

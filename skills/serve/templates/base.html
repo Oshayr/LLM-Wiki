@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LLM Wiki{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css?v=10">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <div class="wiki-topbar">
+        <div class="wiki-topbar-content">
+            <div class="wiki-logo">
+                <a href="/" class="wiki-name">LLM Wiki</a>
+            </div>
+            <form class="wiki-search-form" action="/search" method="GET">
+                <input
+                    type="text"
+                    name="q"
+                    class="wiki-search-input"
+                    placeholder="Search pages..."
+                    autocomplete="off"
+                    id="search-input"
+                >
+                <button type="submit" class="wiki-search-btn">Search</button>
+            </form>
+            <nav class="wiki-nav">
+                <a href="/" class="wiki-nav-link">Home</a>
+                <a href="/create" class="wiki-nav-link">+ New</a>
+                <a href="/daily" class="wiki-nav-link">Daily</a>
+                <a href="/research" class="wiki-nav-link">Research</a>
+                <a href="/graph" class="wiki-nav-link">Graph</a>
+                <a href="/canvas" class="wiki-nav-link">Canvas</a>
+                <a href="/review" class="wiki-nav-link">Review</a>
+                <a href="/gaps" class="wiki-nav-link">Gaps</a>
+                <a href="/random" class="wiki-nav-link">Random</a>
+                <a href="/recent" class="wiki-nav-link">Recent</a>
+                <a href="/stats" class="wiki-nav-link">Stats</a>
+                <button id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="wiki-container">
+        <!-- Main Content Area -->
+        <div class="wiki-main">
+            {% block content %}
+            {% endblock %}
+        </div>
+
+        {% block sidebar_extra %}
+        {% endblock %}
+
+        <!-- Combined Panel (bottom-right floating) -->
+        <div class="wiki-panel" id="wiki-panel">
+            <div class="wiki-panel-header" id="panel-header">
+                <div class="wiki-panel-tabs">
+                    <button class="wiki-panel-tab active" data-tab="queue" id="tab-queue">Queue <span id="queue-count" class="panel-tab-count"></span></button>
+                    <button class="wiki-panel-tab" data-tab="chat" id="tab-chat">Chat <span id="connection-indicator" style="width:7px;height:7px;border-radius:50%;background:#dc3545;display:inline-block;vertical-align:middle;margin-left:3px;" title="Disconnected"></span></button>
+                </div>
+                <button class="wiki-panel-minimize" id="panel-minimize" title="Minimize">_</button>
+            </div>
+            <div class="wiki-panel-body" id="panel-body">
+                <!-- Queue Tab -->
+                <div class="wiki-panel-content active" id="panel-queue">
+                    <div id="research-sidebar-body">
+                        <p class="research-sidebar-empty">No active tasks</p>
+                    </div>
+                </div>
+                <!-- Chat Tab -->
+                <div class="wiki-panel-content" id="panel-chat">
+                    <div class="wiki-chat-messages" id="chat-messages"></div>
+                    <div class="wiki-chat-input-area">
+                        <input
+                            type="text"
+                            class="wiki-chat-input"
+                            id="chat-input"
+                            placeholder="Ask something..."
+                            autocomplete="off"
+                        >
+                        <button class="wiki-chat-send" id="chat-send">Send</button>
+                    </div>
+                    <div class="wiki-chat-status" id="chat-status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="wiki-footer">
+        <div class="wiki-footer-content">
+            <p>
+                <small>
+                    LLM Wiki &middot;
+                    <a href="/wiki/about">About</a> &middot;
+                    <a href="/wiki/help">Help</a>
+                </small>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts (cache-bust with ?v=10 after edits) -->
+    <script src="/static/wiki.js?v=10"></script>
+    <script src="/static/chat.js?v=10"></script>
+    <script>
+    // Combined panel: tabs + minimize
+    (function() {
+        var panelBody = document.getElementById('panel-body');
+        var minimizeBtn = document.getElementById('panel-minimize');
+        var tabs = document.querySelectorAll('.wiki-panel-tab');
+        var contents = document.querySelectorAll('.wiki-panel-content');
+        var minimized = false;
+
+        // Tab switching
+        tabs.forEach(function(tab) {
+            tab.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var target = this.getAttribute('data-tab');
+                tabs.forEach(function(t) { t.classList.remove('active'); });
+                contents.forEach(function(c) { c.classList.remove('active'); });
+                this.classList.add('active');
+                var el = document.getElementById('panel-' + target);
+                if (el) el.classList.add('active');
+                // Expand if minimized
+                if (minimized) {
+                    minimized = false;
+                    panelBody.style.display = 'block';
+                    minimizeBtn.textContent = '_';
+                }
+            });
+        });
+
+        // Minimize toggle
+        if (minimizeBtn && panelBody) {
+            minimizeBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                minimized = !minimized;
+                panelBody.style.display = minimized ? 'none' : 'block';
+                minimizeBtn.textContent = minimized ? '\u25A1' : '_';
+            });
+        }
+    })();
+    </script>
+    <script>
+    var themeOrder = ['light', 'dark', 'terminal', 'wikipedia'];
+    var themeIcons = {'light': '\uD83C\uDF19', 'dark': '>_', 'terminal': 'W', 'wikipedia': '\u2600\uFE0F'};
+    function toggleTheme() {
+        var html = document.documentElement;
+        var current = html.getAttribute('data-theme') || 'light';
+        var idx = themeOrder.indexOf(current);
+        var next = themeOrder[(idx + 1) % themeOrder.length];
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('wiki-theme', next);
+        var btn = document.getElementById('theme-toggle');
+        if (btn) btn.textContent = themeIcons[next] || '\uD83C\uDF19';
+    }
+    // Apply saved theme on load
+    (function() {
+        var saved = localStorage.getItem('wiki-theme') || 'light';
+        if (themeOrder.indexOf(saved) === -1) saved = 'light';
+        document.documentElement.setAttribute('data-theme', saved);
+        var btn = document.getElementById('theme-toggle');
+        if (btn) btn.textContent = themeIcons[saved] || '\uD83C\uDF19';
+    })();
+    </script>
+</body>
+</html>

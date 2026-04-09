@@ -1,0 +1,20 @@
+{
+  "name": "llm-wiki",
+  "version": "1.0.0",
+  "description": "LLM-powered personal wiki — autonomous knowledge base with multi-channel research, ingestion, search, a browsable web UI, and universal data gravity. Saves and retrieves knowledge automatically whenever relevant.",
+  "author": {
+    "name": "Oshayr"
+  },
+  "repository": "https://github.com/Oshayr/llm-wiki",
+  "license": "MIT",
+  "keywords": [
+    "wiki",
+    "knowledge-base",
+    "research",
+    "llm",
+    "autonomous",
+    "second-brain",
+    "obsidian",
+    "claude-code"
+  ]
+}

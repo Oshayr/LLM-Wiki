@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% block title %}Knowledge Graph{% endblock %}
+{% block content %}
+<style>
+    .wiki-chat-sidebar { display: none !important; }
+    .wiki-main { flex: 1 1 100% !important; }
+    #cy { width: 100%; height: calc(100vh - 140px); min-height: 500px; }
+    .graph-toolbar {
+        position: absolute; top: 10px; left: 10px; z-index: 10;
+        display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+        background: var(--wiki-bg, white); padding: 8px 12px;
+        border-radius: var(--wiki-radius-md, 8px);
+        box-shadow: 0 2px 8px var(--wiki-shadow, rgba(0,0,0,0.1));
+        font-family: var(--wiki-font-ui);
+        font-size: 0.85em;
+    }
+    .graph-toolbar select, .graph-toolbar input, .graph-toolbar button {
+        padding: 5px 8px; border: 1px solid var(--wiki-border, #ccc);
+        border-radius: var(--wiki-radius-sm, 4px); font-size: 0.9em;
+        background: var(--wiki-bg, white); color: var(--wiki-text, #333);
+    }
+    .graph-toolbar button:hover { background: var(--wiki-bg-hover, #eee); }
+    .graph-legend-panel {
+        position: absolute; bottom: 10px; right: 10px; z-index: 10;
+        background: var(--wiki-bg, white); padding: 10px 14px;
+        border-radius: var(--wiki-radius-md, 8px);
+        box-shadow: 0 2px 8px var(--wiki-shadow, rgba(0,0,0,0.1));
+        font-family: var(--wiki-font-ui); font-size: 0.8em; max-width: 200px;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+</style>
+
+<div style="width: 100%; position: relative;">
+    <div class="graph-toolbar">
+        <select id="layout-select" onchange="changeLayout(this.value)">
+            <option value="cose-bilkent">Force (cose)</option>
+            <option value="dagre">Hierarchy</option>
+            <option value="circle">Circle</option>
+            <option value="grid">Grid</option>
+            <option value="concentric">Concentric</option>
+        </select>
+        <input type="text" id="search-node" placeholder="Search..." style="width: 140px;" oninput="searchNodes(this.value)">
+        <select id="type-filter" onchange="filterGraph()">
+            <option value="all">All types</option>
+        </select>
+        <select id="conf-filter" onchange="filterGraph()">
+            <option value="all">All confidence</option>
+            <option value="high">High only</option>
+            <option value="medium">Medium+</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+            <input type="checkbox" id="cluster-toggle" onchange="toggleClusters()"> Cluster
+        </label>
+        <button onclick="cy.fit(undefined,30)">Fit</button>
+    </div>
+
+    <div id="cy"></div>
+
+    <div class="graph-legend-panel" id="legend-panel"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
+
+<script>
+const nodeData = {{ nodes_json|safe }};
+const edgeData = {{ edges_json|safe }};
+
+const typeColors = {
+    'concept': '#3366cc', 'entity': '#2e8b57', 'source': '#8b6914',
+    'analysis': '#9932cc', 'comparison': '#e67e00', 'research-scan': '#06b6d4',
+    'deep-dive': '#ec4899', 'documentation': '#64748b', 'daily-note': '#a3a3a3',
+    'decision': '#dc143c', 'timeline': '#059669', 'landscape': '#7c3aed',
+    'automation': '#f97316', 'lint': '#94a3b8', 'unknown': '#999',
+};
+
+const confBorder = { 'high': '#16a34a', 'medium': '#d97706', 'low': '#dc2626', 'unknown': '#aaa' };
+
+const relStyles = {
+    'reference':   { color: '#bbb', width: 1, style: 'solid' },
+    'extends':     { color: '#2e8b57', width: 2, style: 'solid' },
+    'contradicts': { color: '#dc143c', width: 2, style: 'dashed' },
+    'prerequisite':{ color: '#3366cc', width: 2, style: 'dotted' },
+    'see-also':    { color: '#999', width: 1, style: 'dashed' },
+};
+
+// Count incoming links for sizing
+const inDegree = {};
+edgeData.forEach(e => { inDegree[e.target] = (inDegree[e.target] || 0) + 1; });
+
+const cyNodes = nodeData.map(n => ({
+    data: {
+        id: n.id, label: n.title || n.id, type: n.type || 'unknown',
+        confidence: n.confidence || 'unknown',
+        color: typeColors[n.type] || typeColors['unknown'],
+        borderColor: confBorder[n.confidence] || confBorder['unknown'],
+        size: Math.min(60, 25 + (inDegree[n.id] || 0) * 5),
+    }
+}));
+
+const cyEdges = edgeData.map((e, i) => {
+    const rs = relStyles[e.relationship] || relStyles['reference'];
+    return {
+        data: {
+            id: 'e' + i, source: e.source, target: e.target,
+            relationship: e.relationship || 'reference',
+            color: rs.color, width: rs.width, style: rs.style,
+        }
+    };
+});
+
+const cy = cytoscape({
+    container: document.getElementById('cy'),
+    elements: { nodes: cyNodes, edges: cyEdges },
+    style: [
+        {
+            selector: 'node',
+            style: {
+                'label': 'data(label)',
+                'background-color': 'data(color)',
+                'border-width': 3, 'border-color': 'data(borderColor)',
+                'width': 'data(size)', 'height': 'data(size)',
+                'font-size': '10px', 'font-family': 'var(--wiki-font-ui, sans-serif)',
+                'text-wrap': 'wrap', 'text-max-width': '100px',
+                'text-valign': 'bottom', 'text-margin-y': 6,
+                'color': 'var(--wiki-text, #333)',
+            }
+        },
+        {
+            selector: 'edge',
+            style: {
+                'width': 'data(width)', 'line-color': 'data(color)',
+                'line-style': 'data(style)',
+                'target-arrow-color': 'data(color)',
+                'target-arrow-shape': 'triangle',
+                'curve-style': 'bezier', 'arrow-scale': 0.7,
+            }
+        },
+        {
+            selector: 'node:selected',
+            style: { 'border-width': 5, 'border-color': '#2563eb', 'background-color': '#93c5fd' }
+        },
+        {
+            selector: '.highlighted',
+            style: { 'border-width': 5, 'border-color': '#f59e0b', 'font-size': '13px', 'z-index': 999 }
+        },
+        {
+            selector: '.dimmed',
+            style: { 'opacity': 0.15 }
+        },
+    ],
+    layout: { name: 'cose', animate: true, randomize: true, nodeOverlap: 20, idealEdgeLength: 80 },
+    wheelSensitivity: 0.3,
+    minZoom: 0.1, maxZoom: 5,
+});
+
+// Click to navigate
+cy.on('tap', 'node', function(evt) { window.location.href = '/wiki/' + evt.target.id(); });
+
+// Hover: highlight neighborhood
+cy.on('mouseover', 'node', function(evt) {
+    const node = evt.target;
+    const neighborhood = node.neighborhood().add(node);
+    cy.elements().addClass('dimmed');
+    neighborhood.removeClass('dimmed');
+    node.addClass('highlighted');
+    document.body.style.cursor = 'pointer';
+});
+cy.on('mouseout', 'node', function(evt) {
+    cy.elements().removeClass('dimmed').removeClass('highlighted');
+    document.body.style.cursor = 'default';
+});
+
+// Layout switching
+function changeLayout(name) {
+    const opts = { name: name, animate: true, animationDuration: 600 };
+    if (name === 'cose' || name === 'cose-bilkent') { opts.name = 'cose'; opts.randomize = true; opts.nodeOverlap = 20; }
+    if (name === 'dagre') { opts.rankDir = 'TB'; opts.nodeSep = 40; opts.rankSep = 60; }
+    if (name === 'concentric') { opts.concentric = n => inDegree[n.id()] || 0; opts.levelWidth = () => 2; }
+    cy.layout(opts).run();
+}
+
+// Search highlighting
+function searchNodes(term) {
+    cy.elements().removeClass('highlighted dimmed');
+    if (!term) return;
+    const lower = term.toLowerCase();
+    const matches = cy.nodes().filter(n => n.data('label').toLowerCase().includes(lower));
+    if (matches.length > 0) {
+        cy.elements().addClass('dimmed');
+        matches.forEach(m => {
+            m.neighborhood().add(m).removeClass('dimmed');
+            m.addClass('highlighted');
+        });
+    }
+}
+
+// Type/confidence filtering
+function filterGraph() {
+    const typeVal = document.getElementById('type-filter').value;
+    const confVal = document.getElementById('conf-filter').value;
+    const confRank = {'high': 3, 'medium': 2, 'low': 1, 'unknown': 0};
+    const minRank = confVal === 'all' ? 0 : (confRank[confVal] || 0);
+
+    cy.nodes().forEach(n => {
+        const typeOk = typeVal === 'all' || n.data('type') === typeVal;
+        const confOk = (confRank[n.data('confidence')] || 0) >= minRank;
+        if (typeOk && confOk) { n.style('display', 'element'); }
+        else { n.style('display', 'none'); }
+    });
+}
+
+// Cluster toggle (group by type using compound nodes)
+let clustered = false;
+function toggleClusters() {
+    clustered = !clustered;
+    if (clustered) {
+        const types = [...new Set(nodeData.map(n => n.type || 'unknown'))];
+        types.forEach(t => {
+            cy.add({ group: 'nodes', data: { id: 'cluster-' + t, label: t.toUpperCase() }, classes: 'cluster-parent' });
+        });
+        cy.nodes('[!parent]').forEach(n => {
+            if (!n.id().startsWith('cluster-')) {
+                n.move({ parent: 'cluster-' + (n.data('type') || 'unknown') });
+            }
+        });
+        cy.style().selector('.cluster-parent').style({
+            'background-color': '#f0f0f0', 'background-opacity': 0.3,
+            'border-width': 1, 'border-color': '#ccc', 'border-style': 'dashed',
+            'label': 'data(label)', 'font-size': '14px', 'font-weight': 'bold',
+            'text-valign': 'top', 'text-halign': 'center', 'color': '#666',
+        }).update();
+        cy.layout({ name: 'cose', animate: true }).run();
+    } else {
+        cy.nodes('[parent]').forEach(n => n.move({ parent: null }));
+        cy.nodes('.cluster-parent').remove();
+        cy.layout({ name: 'cose', animate: true, randomize: true }).run();
+    }
+}
+
+// Populate type filter dropdown
+const types = [...new Set(nodeData.map(n => n.type || 'unknown'))].sort();
+const sel = document.getElementById('type-filter');
+types.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t; opt.textContent = t;
+    sel.appendChild(opt);
+});
+
+// Build legend
+const legend = document.getElementById('legend-panel');
+const h = document.createElement('strong');
+h.textContent = 'Node Types';
+h.style.fontSize = '0.85em';
+legend.appendChild(h);
+
+types.forEach(t => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    const dot = document.createElement('div');
+    dot.className = 'legend-dot';
+    dot.style.background = typeColors[t] || '#999';
+    const label = document.createElement('span');
+    label.textContent = t;
+    item.appendChild(dot);
+    item.appendChild(label);
+    legend.appendChild(item);
+});
+
+// Edge legend
+const relTypes = [...new Set(edgeData.map(e => e.relationship || 'reference'))];
+if (relTypes.length > 1) {
+    const rh = document.createElement('strong');
+    rh.textContent = 'Link Types';
+    rh.style.cssText = 'display:block;margin-top:8px;font-size:0.85em;';
+    legend.appendChild(rh);
+    relTypes.forEach(r => {
+        const rs = relStyles[r] || relStyles['reference'];
+        const item = document.createElement('div');
+        item.className = 'legend-item';
+        const line = document.createElement('div');
+        line.style.cssText = 'width:18px;height:0;border-top:' + rs.width + 'px ' +
+            (rs.style === 'dashed' ? 'dashed' : rs.style === 'dotted' ? 'dotted' : 'solid') +
+            ' ' + rs.color + ';';
+        const label = document.createElement('span');
+        label.textContent = r;
+        item.appendChild(line);
+        item.appendChild(label);
+        legend.appendChild(item);
+    });
+}
+
+// Stats
+const statsEl = document.createElement('div');
+statsEl.style.cssText = 'margin-top:8px;font-size:0.75em;color:var(--wiki-text-light,#666);';
+statsEl.textContent = nodeData.length + ' nodes, ' + edgeData.length + ' edges';
+legend.appendChild(statsEl);
+</script>
+{% endblock %}

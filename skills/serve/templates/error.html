@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Error{% endblock %}
+{% block content %}
+<div class="error-page">
+    <h1>Page Not Found</h1>
+    <p>{{ message }}</p>
+    <p><a href="/">Return to Home</a> | <a href="/search">Search the Wiki</a></p>
+</div>
+{% endblock %}

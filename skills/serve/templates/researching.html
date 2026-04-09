@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Researching: {{ slug }} - LLM Wiki{% endblock %}
+
+{% block content %}
+<div class="wiki-researching-page">
+    <div class="wiki-researching-container">
+        <h1 class="wiki-researching-title">Researching: <em>{{ slug|replace('-', ' ')|title }}</em></h1>
+
+        <!-- Progress Section -->
+        <div class="wiki-progress-section">
+            <div class="wiki-progress-bar-container">
+                <div class="wiki-progress-bar">
+                    <div class="wiki-progress-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+                <span class="wiki-progress-percent" id="progress-percent">0%</span>
+            </div>
+
+            <!-- Stage Indicator -->
+            <div class="wiki-stage-indicator" id="stage-indicator">
+                <p class="wiki-stage-text">Initializing research...</p>
+                <div class="wiki-spinner"></div>
+            </div>
+
+            <!-- Elapsed Time -->
+            <div class="wiki-elapsed-time">
+                <p>Elapsed time: <span id="elapsed-time">0:00</span></p>
+            </div>
+        </div>
+
+        <!-- Message -->
+        <div class="wiki-researching-message">
+            <p>This page will appear automatically when the research is complete.</p>
+        </div>
+
+        <!-- Cancel Button -->
+        <div class="wiki-researching-actions">
+            <button class="wiki-btn wiki-btn-secondary" id="cancel-btn">Cancel Research</button>
+        </div>
+
+        <!-- Error Message (Hidden by Default) -->
+        <div class="wiki-error-message" id="error-message" style="display: none;">
+            <p id="error-text"></p>
+            <button class="wiki-btn wiki-btn-primary" id="retry-btn">Retry</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const slug = '{{ slug }}';
+    let startTime = Date.now();
+    let eventSource = null;
+    let cancelRequested = false;
+
+    // Update elapsed time
+    function updateElapsedTime() {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        document.getElementById('elapsed-time').textContent =
+            minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+    }
+
+    // Connect to SSE endpoint
+    function connectToStatus() {
+        if (cancelRequested) return;
+
+        eventSource = new EventSource('/api/status/' + slug);
+
+        eventSource.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+
+                if (data.status === 'done') {
+                    eventSource.close();
+                    window.location.href = '/wiki/' + slug;
+                    return;
+                }
+
+                if (data.status === 'failed' || data.status === 'not_found') {
+                    eventSource.close();
+                    document.getElementById('error-message').style.display = 'block';
+                    document.getElementById('error-text').textContent =
+                        (data.progress && data.progress.detail) || 'Research failed. Please try again.';
+                    document.getElementById('stage-indicator').style.display = 'none';
+                    document.getElementById('cancel-btn').style.display = 'none';
+                    return;
+                }
+
+                // Update progress display
+                if (data.progress && data.progress.stage) {
+                    document.getElementById('stage-indicator').innerHTML =
+                        '<p class="wiki-stage-text">' + data.progress.stage + '</p><div class="wiki-spinner"></div>';
+                }
+
+                if (data.elapsed_seconds) {
+                    const m = Math.floor(data.elapsed_seconds / 60);
+                    const s = data.elapsed_seconds % 60;
+                    document.getElementById('elapsed-time').textContent =
+                        m + ':' + (s < 10 ? '0' : '') + s;
+                }
+            } catch (e) {
+                console.error('SSE parse error:', e);
+            }
+        };
+
+        eventSource.onerror = function() {
+            if (eventSource.readyState === EventSource.CLOSED) {
+                setTimeout(connectToStatus, 3000);
+            }
+        };
+    }
+
+    // Cancel research
+    document.getElementById('cancel-btn').addEventListener('click', function() {
+        cancelRequested = true;
+        if (eventSource) {
+            eventSource.close();
+        }
+        fetch('/api/cancel/' + slug, { method: 'POST' })
+            .then(function(response) {
+                if (response.ok) {
+                    window.location.href = '/';
+                }
+            });
+    });
+
+    // Retry button
+    document.getElementById('retry-btn').addEventListener('click', function() {
+        document.getElementById('error-message').style.display = 'none';
+        document.getElementById('stage-indicator').style.display = 'block';
+        document.getElementById('cancel-btn').style.display = 'block';
+        document.getElementById('progress-fill').style.width = '0%';
+        document.getElementById('progress-percent').textContent = '0%';
+        startTime = Date.now();
+        connectToStatus();
+    });
+
+    // Start elapsed time updater
+    setInterval(updateElapsedTime, 1000);
+
+    // Connect to status stream
+    connectToStatus();
+})();
+</script>
+{% endblock %}
