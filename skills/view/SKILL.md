@@ -7,7 +7,7 @@ description: "Wiki dashboard — browse pages, view stats, knowledge graph, expo
 
 Dashboard, graph visualization, stats, and export for the wiki.
 
-Uses `.wiki/` in the current working directory. Location can be overridden by the user. If not found, say "No wiki found."
+Resolve `.wiki/` from plugin install scope. If not found, say "No wiki found."
 
 ## Arguments
 

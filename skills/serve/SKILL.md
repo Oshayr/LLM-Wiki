@@ -7,7 +7,7 @@ description: "Start the wiki web server — browsable Wikipedia-style UI with li
 
 Launch a local web server that presents the wiki as a browsable, Wikipedia-style website with live background research, integrated chat, and a split-pane editor with AI assist.
 
-Uses `.wiki/` in the current working directory. Location can be overridden by the user. If not found, auto-create it.
+Resolve `.wiki/` from plugin install scope. Auto-create if missing.
 
 ## Arguments
 

@@ -1,6 +1,6 @@
 ---
 name: search-channel
-description: "Parameterized search channel — web or docs. Returns normalized result arrays."
+description: "Parameterized search channel — web, academic, code, docs, or wikipedia. Returns normalized result arrays."
 model: haiku
 ---
 

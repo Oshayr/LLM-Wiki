@@ -1,13 +1,13 @@
 ---
 name: wiki-write
-description: "Add or update wiki content — autonomous ingest from URL, file, or text; update existing pages autonomously. Auto-creates .wiki/ on first use. Use when: 'save to wiki', 'remember this', 'note this', 'store this', 'add to knowledge base', 'save findings', 'save research', 'save idea', 'write to wiki', 'ingest', 'add page', 'update page'."
+description: "Add or update wiki content — autonomous ingest from URL, file, or text; autonomous update of existing pages. Auto-creates .wiki/ on first use. Use when: 'save to wiki', 'remember this', 'note this', 'store this', 'add to knowledge base', 'save findings', 'save research', 'save idea', 'write to wiki', 'ingest', 'add page', 'update page'."
 ---
 
 # Wiki Write
 
 Add or update content in the wiki. Auto-creates `.wiki/` if it doesn't exist.
 
-Uses `.wiki/` in the current working directory. Location can be overridden by the user.
+Resolve `.wiki/` from plugin install scope. Auto-create if missing.
 
 ## Auto-Init
 
@@ -32,9 +32,9 @@ If `.wiki/` doesn't exist, create it automatically before proceeding:
 - **`/wiki-write <file-path>`** — ingest a local file (text, markdown, PDF)
 - **`/wiki-write "text..."`** — ingest pasted text
 - **`/wiki-write --batch <dir>`** — ingest all `.md` files in a directory
-- **`/wiki-write --update <slug>`** — update an existing page (autonomous)
+- **`/wiki-write --update <slug>`** — update an existing page autonomously
 - **`/wiki-write --update <slug> <url>`** — update page with content from URL
-- **`/wiki-write --refresh-stale`** — find and refresh pages >90 days old on fast-moving topics
+- **`/wiki-write --refresh-stale`** — find and refresh stale pages based on freshness tier
 
 ## Ingest (default — no `--update` flag)
 
@@ -53,15 +53,14 @@ Report: pages written, pages updated, confidence assigned.
 Launch the `wiki-writer` agent with `mode: update`:
 1. Reads current page
 2. Generates proposed changes
-3. Applies changes immediately — no confirmation pause, no diff preview
-4. Checks downstream pages for impact
-5. Runs contradiction sweep against high-confidence pages
-6. Updates index.md and log.md
+3. Runs contradiction sweep against high-confidence pages
+4. Applies changes directly — same autonomous behavior as ingest
+5. Updates index.md and log.md
 
 ## Refresh Stale (`--refresh-stale`)
 
-Finds pages where `updated` >90 days old on fast-moving topics (`ai`, `llm`, `api`, `cloud`, `mcp`).
-For each: searches for fresh sources → applies changes autonomously → updates.
+Finds pages past their freshness tier TTL (see freshness tiers in `/wiki-maintain`).
+For each: searches for fresh sources → applies updates autonomously.
 
 ## Batch (`--batch`)
 

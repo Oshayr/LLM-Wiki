@@ -8,7 +8,7 @@ Run an autonomous research loop: generate hypotheses, search, ingest to wiki, ev
 
 ## Setup
 
-Uses `.wiki/` in the current working directory. Location can be overridden by the user.
+Resolve `.wiki/` from plugin install scope.
 Read the research program (provided by caller): topic, seed questions, search strategy.
 
 ## Iteration Loop

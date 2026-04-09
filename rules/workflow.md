@@ -2,7 +2,7 @@
 
 ## Ingest behavior
 - Ingest is autonomous — never pause for user confirmation when creating new pages
-- Update is autonomous — never pause for user confirmation when overwriting existing content
+- Update is autonomous — applies changes directly, same as ingest
 - Backlinks are mandatory — every new page must update related pages' `related:` field
 - Contradictions are flagged, never silently overwritten — if new content conflicts with existing, note both views
 
@@ -32,7 +32,7 @@ Resolution: explicit `freshness_tier:` > explicit `ttl:` > auto-classification f
 
 ## Maintenance
 - Run `/wiki-maintain` periodically to fix broken links, merge duplicates, upgrade confidence
-- Stale pages (>90 days without update) get flagged
+- Stale pages (past their freshness tier TTL) get flagged
 - Near-duplicate pages (>60% slug token overlap) get flagged for merge
 
 ## Auto-init
@@ -49,6 +49,8 @@ Resolution: explicit `freshness_tier:` > explicit `ttl:` > auto-classification f
 Custom page types are loaded from `.wiki/templates/<type-name>.md`. Users can define their own page types by placing template files in this directory.
 
 ## Path discovery
-- Uses `.wiki/` in the current working directory (project root)
-- Users can override with a custom path if needed
-- No directory tree walking — uses default Claude Code data location
+- Resolve `.wiki/` location from the plugin's install scope:
+  - Plugin installed at **user level** (`~/.claude/plugins/llm-wiki`) → `.wiki/` at `~/.wiki/`
+  - Plugin installed at **project level** (`.claude/plugins/llm-wiki`) → `.wiki/` at project root (next to `.git/`)
+- The path is derived from `${PLUGIN_ROOT}` — if it's under `~/.claude/`, it's user-level; if it's under the project dir, it's project-level
+- No walking up directories, no hardcoded paths
