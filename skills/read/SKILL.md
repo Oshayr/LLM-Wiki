@@ -21,7 +21,7 @@ Launch the `wiki-reader` agent with the question and depth level.
 
 ### Standard depth (default)
 1. Read `.wiki/index.md`, identify 2-4 relevant pages
-2. For >200 pages: use `bin/search-fulltext.py` for ranked results
+2. Use `bin/search-fulltext.py` for ranked results
 3. Read the relevant pages, synthesize a cited answer with `[[slug]]` references
 4. **If NOT found or insufficient**: automatically research using whatever tools are available:
    - Discover available tools at runtime (WebSearch, WebFetch, `wiki_wikipedia_search` for factual/encyclopedic topics, any MCP tools like Perplexity, Context7, etc.)

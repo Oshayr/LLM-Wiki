@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""search-fulltext.py — QMD term-frequency search for wiki pages.
+"""search-fulltext.py — TF-IDF term-frequency search for wiki pages.
 
 Usage:
-    python3 wiki-qmd-search.py <pages_dir> <query> [--top N] [--json]
+    python3 search-fulltext.py <pages_dir> <query> [--top N] [--json]
 
 Builds an in-memory TF-IDF index from all .md files and returns ranked results.
-For wikis with >200 pages where reading index.md is too slow.
+Provides comprehensive full-text search across all pages.
 """
 
 import argparse

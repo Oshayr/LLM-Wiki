@@ -18,17 +18,12 @@ Resolve `.wiki/` from plugin install scope. If not found, say "No wiki found."
 
 ## Process
 
-### 1. Read index.md + Check Page Count
+### 1. Read index.md
 
-Read `.wiki/index.md`.
-
-Count `.md` files in `.wiki/pages/`:
+Read `.wiki/index.md`. Identify 2-4 relevant pages using full-text TF-IDF search for ranked results:
 ```bash
-find .wiki/pages/ -maxdepth 1 -name "*.md" | wc -l
+python3 bin/search-fulltext.py .wiki/pages "<question>" --top 5
 ```
-
-- **≤200 pages**: identify 2-4 slugs from index.md by text match
-- **>200 pages**: use `python3 bin/search-fulltext.py .wiki/pages "<question>" --top 5`
 
 ### 2. Quick Depth
 If depth is `quick`: return the matching page titles and one-line descriptions from index.md. If not found, suggest running standard `/wiki-read`. Done.
