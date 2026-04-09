@@ -8,7 +8,7 @@
 # llm-wiki
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/Oshayr/llm-wiki)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/Oshayr/llm-wiki)
 [![Platform](https://img.shields.io/badge/platform-Claude%20Code-orange.svg)](https://claude.ai/claude-code)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Oshayr/llm-wiki/pulls)
 
@@ -21,20 +21,16 @@ Inspired by [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpath
 ### Knowledge Management
 - **Automatic capture** — saves research, ideas, decisions, and findings to the wiki as you work
 - **Smart retrieval with research-on-miss** — checks wiki first, automatically researches and ingests if not found
-- **Hybrid search** — BM25 keyword matching + semantic vector similarity via Reciprocal Rank Fusion
+- **Full-text search** — TF-IDF keyword search with content-aware scoring and snippet extraction
 - **Block references & transclusion** — `[[page#heading]]` links and `![[page#section]]` embeds
 - **Backlink panel** with automatic unlinked mention detection
 - **Frontmatter query language** — Dataview-like queries: `SELECT title, type FROM pages WHERE confidence = "high"`
 - **Intelligent freshness** — 9-tier staleness system from `live` (15 min) to `permanent` (never expires)
 
-### Research Engine
-- **Research-on-miss** — `/wiki-read` automatically researches topics not in the wiki using whatever tools are available
-- **Multi-channel parallel search** — web, academic (Semantic Scholar, OpenAlex, CrossRef, arXiv), code (GitHub, npm, PyPI), docs (Context7)
-- **Citation snowballing** — forward/backward citation graph building from seed papers
-- **Autonomous research loops** — iterative hypothesis-driven research with git-based rollback
-- **Fact-checking pipeline** — extract claims, verify against external sources, track verification status
-- **Source credibility scoring** with tiered ranking
-- **Works with any tools + Wikipedia** — no hardcoded services; uses Wikipedia (MediaWiki API), any MCP tools, WebSearch, or WebFetch the user has
+### Research-on-Miss
+- **Automatic research** — `/wiki-read` researches topics not in the wiki using available tools
+- **Tool discovery** — works with whatever tools the user has (WebSearch, WebFetch, Wikipedia API, MCP tools)
+- **Auto-ingestion** — saves findings to wiki with proper citations
 
 ### Web UI
 - **Wikipedia-style browsable website** with 4 themes (light, dark, terminal, wikipedia)
@@ -75,10 +71,10 @@ Restart Claude Code. Start using the wiki immediately:
 ### First Use
 
 ```bash
-pip install onnxruntime tokenizers numpy sqlite-vec
+pip install numpy sqlite-vec
 ```
 
-The embedding model (~23MB ONNX) downloads automatically on first use. No PyTorch required.
+Required for vector operations in search and caching.
 
 ## Skills Reference
 
@@ -147,7 +143,7 @@ flowchart TD
 llm-wiki/
   .claude-plugin/       Plugin metadata (plugin.json, marketplace.json)
   agents/               10 autonomous agents
-  bin/                  22 CLI utilities (search, embed, backlinks, gaps, cache, ...)
+  bin/                  24 CLI utilities (search, backlinks, gaps, cache, ...)
   mcp/                  MCP server for wiki operations
   rules/                Workflow and integration rules
   skills/               5 user-facing skills
@@ -247,7 +243,7 @@ The plugin includes an MCP server exposing wiki operations:
 
 | Tool | Description |
 |------|-------------|
-| `wiki_search` | Hybrid semantic + keyword search |
+| `wiki_search` | TF-IDF full-text search |
 | `wiki_read` | Read a page by slug |
 | `wiki_write` | Create or update a page |
 | `wiki_list` | List pages, optionally filtered by type |

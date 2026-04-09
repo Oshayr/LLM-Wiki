@@ -145,7 +145,6 @@ const NAV = [
   ]},
   {group:"Technical Reference", items:[
     {id:"search",icon:"search",label:"Search & Retrieval"},
-    {id:"research",icon:"globe",label:"Research Engine"},
     {id:"quality",icon:"shield",label:"Quality & Provenance"},
     {id:"deps",icon:"pkg",label:"Dependencies"},
   ]},
@@ -160,10 +159,6 @@ const SKILLS = [
    details:"Queries the wiki knowledge base and synthesizes cited answers. Three depth modes: quick (index scan only), standard (reads 2\u20134 relevant pages), deep (articles + raw sources + cross-references). Uses TF-IDF full-text search for ranked results. All answers include [[slug]] citations. Contradictions between sources are explicitly noted.",
    examples:["/wiki-read What is RLHF?","/wiki-read quick list all ML pages","/wiki-read deep How do transformers handle long-range dependencies?"],
    flow:["Parse question","Check index.md","Full-text search","Read relevant pages","Synthesize answer","Add [[citations]]","Note contradictions"]},
-  {cmd:"/wiki-research", args:"<topic>", purpose:"Multi-channel web research with auto-ingestion", color:"#7c3aed",
-   details:"Launches web search via Claude's built-in tools, with optional docs channel (Context7 MCP, if installed). Results are deduplicated by URL and title similarity (>85%). Sources ranked by credibility tier with bonuses for corroboration. Deep-dive mode runs autonomous iterative research loops (max 3 iterations) with checkpoint-based rollback.",
-   examples:["/wiki-research transformer attention mechanisms","/wiki-research scan latest developments in MCP protocol","/wiki-research deep-dive quantum error correction","/wiki-research refresh transformer-architecture","/wiki-research cache stats"],
-   flow:["Classify complexity","Check existing wiki","Generate query variants","Fan out to channels","Merge & deduplicate","Rank by credibility","Ingest top results","Update wiki"]},
   {cmd:"/wiki-serve", args:"", purpose:"Start Wikipedia-style website on localhost:8420", color:"#dc2626",
    details:"Launches a FastAPI web server with a Wikipedia-style browsable interface. Only runs when explicitly invoked. Features: 4 themes (light, dark, terminal, Wikipedia), interactive knowledge graph (Cytoscape.js), split-pane markdown editor with live preview, WebSocket chat with RAG-augmented Q&A, live research (click any red link to auto-research), spaced repetition review (FSRS), content gap analysis, canvas/whiteboard view, and SSE progress streaming. Can also be launched manually via CLI.",
    examples:["/wiki-serve","/wiki-serve stop","python skills/serve/scripts/server.py --wiki-dir .wiki/ --port 8420"],
@@ -182,9 +177,9 @@ const AGENTS = [
   {name:"wiki-writer",desc:"Creates and updates wiki pages. Both ingest and update modes are fully autonomous. Handles slug generation, frontmatter creation, contradiction detection, backlink cascading, and concurrent write safety via lock files. Supports custom page type templates from .wiki/templates/.",trigger:"Any write operation to the wiki",color:"#0f766e"},
   {name:"wiki-reader",desc:"Answers questions from wiki knowledge. Navigates via index.md, supports quick/standard/deep depth modes. Uses TF-IDF full-text search for ranked results. Cites via [[slug]] references and presents contradictions explicitly.",trigger:"Any question that might be answered by wiki content",color:"#0284c7"},
   {name:"wiki-auditor",desc:"Audits wiki health inline. Scans all pages for broken links, missing frontmatter, orphan pages, near-duplicates (Jaccard >60%), and dead index entries. Applies fixes directly to files.",trigger:"/wiki-maintain command or periodic health checks",color:"#ea580c"},
-  {name:"search-orchestrator",desc:"Orchestrates multi-channel search. Classifies research complexity (simple/moderate/complex), checks existing wiki coverage, generates diverse query variants, fans out to channel subagents, and merges/deduplicates results by URL, DOI, and title similarity.",trigger:"/wiki-research command with any topic",color:"#7c3aed"},
+  {name:"search-orchestrator",desc:"Orchestrates multi-channel search. Classifies research complexity (simple/moderate/complex), checks existing wiki coverage, generates diverse query variants, fans out to channel subagents, and merges/deduplicates results by URL, DOI, and title similarity.",trigger:"Research fallback during /wiki-read when wiki lacks coverage",color:"#7c3aed"},
   {name:"search-channel",desc:"Executes parameterized searches for a specific channel type (web, docs). Each channel has its own fetch logic, caching TTL, and result normalization. Returns standardized {title, url, snippet, source_type, credibility_tier} objects.",trigger:"Called by search-orchestrator for each channel",color:"#6366f1"},
-  {name:"research-loop",desc:"Runs autonomous iterative research (max 3 iterations). Each iteration: creates checkpoint, generates hypotheses, launches search-orchestrator, ingests via wiki-writer, evaluates quality metrics, and keeps or discards based on improvement. Stops early if metrics plateau.",trigger:"/wiki-research deep-dive command",color:"#9333ea"},
+  {name:"research-loop",desc:"Runs autonomous iterative research (max 3 iterations). Each iteration: creates checkpoint, generates hypotheses, launches search-orchestrator, ingests via wiki-writer, evaluates quality metrics, and keeps or discards based on improvement. Stops early if metrics plateau.",trigger:"Deep research mode during /wiki-read deep",color:"#9333ea"},
   {name:"research-processor",desc:"Post-processes parallel research results from search-orchestrator. Two modes: condense (extract findings, deduplicate, score confidence, detect stale) and deduplicate (merge by URL, DOI, title similarity >85%, content hash). Ranks by credibility \u00d7 corroboration \u00d7 recency.",trigger:"Called by search-orchestrator after channel results are collected",color:"#a855f7"},
   {name:"fact-checker",desc:"Verifies factual claims against external sources. Extracts verifiable claims (numbers, dates, entities, comparisons), verifies each via WebSearch (max 3 searches/claim, 10 claims/page). Assigns status: verified, unverified, disputed, or outdated.",trigger:"/wiki-maintain fact-check or during deep-dive research iterations",color:"#dc2626"},
   {name:"citation-explorer",desc:"Explores citation chains for a topic. Uses web search to trace citation relationships, identifies key papers by citation count, recency, and relevance. Recommends top 5\u201310 papers for wiki ingestion.",trigger:"During deep-dive research iterations when citation chains are relevant",color:"#0891b2"},
@@ -423,7 +418,7 @@ function App() {
         </div></div>
         <div className="step"><div className="step-num">3</div><div className="step-body">
           <div className="step-title">Restart Claude Code</div>
-          <div className="step-desc">Restart Claude Code or run <code>/reload-plugins</code>. Verify the 6 slash commands are available: <code>/wiki-write</code>, <code>/wiki-read</code>, <code>/wiki-research</code>, <code>/wiki-serve</code>, <code>/wiki-maintain</code>, <code>/wiki-view</code>.</div>
+          <div className="step-desc">Restart Claude Code or run <code>/reload-plugins</code>. Verify the 5 slash commands are available: <code>/wiki-write</code>, <code>/wiki-read</code>, <code>/wiki-serve</code>, <code>/wiki-maintain</code>, <code>/wiki-view</code>.</div>
         </div></div>
         <div className="step"><div className="step-num">4</div><div className="step-body">
           <div className="step-title">First Use</div>
@@ -442,10 +437,6 @@ function App() {
         <Expandable title="Ask the wiki a question">
           <CodeBlock label="Claude Code">/wiki-read What is the difference between RLHF and DPO?</CodeBlock>
           <p style={{fontSize:14,color:'var(--text-muted)',marginTop:8}}>Searches the wiki, reads 2–4 relevant pages, synthesizes an answer with <code>[[slug]]</code> citations.</p>
-        </Expandable>
-        <Expandable title="Research a topic">
-          <CodeBlock label="Claude Code">/wiki-research transformer attention mechanisms</CodeBlock>
-          <p style={{fontSize:14,color:'var(--text-muted)',marginTop:8}}>Parallel searches across web, academic, code, and docs channels. Deduplicates, ranks by credibility, and auto-ingests top results.</p>
         </Expandable>
         <Expandable title="Browse in browser">
           <CodeBlock label="Claude Code">/wiki-serve</CodeBlock>
