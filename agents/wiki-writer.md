@@ -84,11 +84,8 @@ After merging, find other pages referencing the same entities:
 - Add cross-references, update factual claims, flag contradictions
 - Log cascade in log.md
 
-### 8. Delegate Backlink Audit
-After writing pages, delegate backlink maintenance to the `backlink-manager` agent:
-- It runs `bin/backlinks.py update` + `bin/backlinks.py query` to maintain the reverse index
-- It updates `related:` fields on linked pages
-- It runs `bin/mentions.py` for unlinked mention detection
+### 8. Backlink Audit
+Delegate to the `backlink-manager` agent with the new/updated slug. It handles reverse index updates, related field maintenance, and unlinked mention detection.
 
 ### 9. Update index.md
 Add new pages under appropriate categories. Update page count.

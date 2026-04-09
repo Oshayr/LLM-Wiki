@@ -12,7 +12,7 @@ Audit and fix wiki structural issues. Uses `.wiki/` in the current working direc
 Read all `.md` files in `.wiki/pages/`. For each page, parse YAML frontmatter and body content.
 
 ### 2. Check Broken Links
-Find all `[[slug]]` references in page bodies. Check each against existing page stems. List broken links with source page.
+Delegate backlink integrity to the `backlink-manager` agent (full rebuild mode). Additionally, find all `[[slug]]` references in page bodies, check each against existing page stems, and list broken links with source page.
 
 ### 3. Fix Missing Frontmatter
 Every page must have: title, type, confidence, created, updated. Add defaults for any missing fields:

@@ -40,30 +40,27 @@ CHANNEL_TTLS = {
     "wikipedia": 30,
 }
 
-# Topic-aware TTLs for cache entries (maps freshness tier to cache TTL in days)
-TOPIC_TTLS = {
-    "live": 0.01,       # ~15 min
-    "breaking": 0.25,   # ~6 hours
-    "current": 1,       # 1 day
-    "fast": 3,          # 3 days
-    "moderate": 7,      # 1 week
-    "standard": 7,      # 1 week (default)
-    "academic": 30,     # 1 month
-    "evergreen": 30,    # 1 month
-    "permanent": 30,    # 1 month
+# Topic-aware TTL overrides (keywords → days)
+# If a query matches these keywords, use a shorter/longer cache TTL
+TOPIC_TTL_OVERRIDES = {
+    1: {"breaking", "incident", "outage", "live", "score"},          # 1 day
+    3: {"news", "current", "trending", "announcement", "release"},   # 3 days
+    7: {"ai", "llm", "mcp", "claude", "gpt", "api", "benchmark"},   # 7 days (default web)
+    14: {"version", "framework", "library", "tool", "software"},     # 14 days
+    60: {"paper", "research", "study", "algorithm", "theorem"},      # 60 days
 }
 
 
-def get_topic_ttl(freshness_tier: str) -> int:
-    """Get cache TTL in days for a given freshness tier.
+def get_topic_ttl(query: str, channel: str = "web") -> int:
+    """Get a topic-aware TTL in days for a search cache entry.
 
-    Args:
-        freshness_tier: One of live, breaking, current, fast, moderate, standard, academic, evergreen, permanent
-
-    Returns:
-        TTL in days for cache entries related to this topic type.
+    Checks query keywords against topic overrides, falls back to channel default.
     """
-    return TOPIC_TTLS.get(freshness_tier, TOPIC_TTLS["standard"])
+    query_lower = query.lower()
+    for ttl_days, keywords in sorted(TOPIC_TTL_OVERRIDES.items()):
+        if any(kw in query_lower for kw in keywords):
+            return ttl_days
+    return CHANNEL_TTLS.get(channel, 7)
 
 
 def parse_arguments():

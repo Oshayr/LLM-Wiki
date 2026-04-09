@@ -40,23 +40,14 @@ for arg in sys.argv:
 
 if not WIKI_DIR:
     # Resolve from plugin install scope:
-    # - If PLUGIN_ROOT is under ~/.claude/ → user-level → ~/.wiki/
-    # - Otherwise → project-level → .wiki/ at project root (next to .git/)
-    home_claude = Path.home() / ".claude"
-    try:
-        PLUGIN_ROOT.resolve().relative_to(home_claude.resolve())
-        # User-level install
-        WIKI_DIR = Path.home() / ".wiki"
-    except ValueError:
-        # Project-level install — .wiki/ at project root (PLUGIN_ROOT's ancestor with .git/)
-        candidate = PLUGIN_ROOT.resolve()
-        while candidate != candidate.parent:
-            if (candidate / ".git").exists():
-                WIKI_DIR = candidate / ".wiki"
-                break
-            candidate = candidate.parent
-        if not WIKI_DIR:
-            WIKI_DIR = Path.cwd() / ".wiki"
+    # If plugin is under ~/.claude/ (user-level), wiki is at ~/.wiki/
+    # Otherwise, wiki is at project root .wiki/
+    plugin_root = Path(__file__).parent.parent.resolve()
+    home = Path.home()
+    if str(plugin_root).startswith(str(home / ".claude")):
+        WIKI_DIR = home / ".wiki"
+    else:
+        WIKI_DIR = Path(".wiki")
 
 mcp = FastMCP(
     "LLM Wiki",

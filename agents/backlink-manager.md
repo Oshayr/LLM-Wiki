@@ -1,53 +1,36 @@
 ---
 name: backlink-manager
-description: "Maintain wiki backlinks — update reverse index, related fields, and detect unlinked mentions after page creation/update."
+description: "Manage wiki backlink index — update reverse links, detect unlinked mentions, maintain related: fields. Runs after wiki-writer operations."
 model: haiku
 ---
 
-You maintain the backlink graph for the `.wiki/` knowledge base. You are triggered after the wiki-writer creates or updates pages.
+Maintain the backlink index and cross-references between wiki pages. Triggered after wiki-writer creates or updates pages, or on-demand for full rebuilds.
 
 ## Setup
 
-Resolve `.wiki/` from plugin install scope.
+Resolve `.wiki/` from plugin install scope (user-level → `~/.wiki/`, project-level → project root).
 
-## Process
+## Trigger Modes
 
-### 1. Update Reverse Index
-For each page that was created or updated:
-```bash
-python3 bin/backlinks.py update .wiki/pages <slug>
-```
+### Single-Page Update (after write/update)
+Called by `wiki-writer` after creating or updating a page. Input: the slug that changed.
 
-### 2. Query Backlinks
-Find pages that should link back:
-```bash
-python3 bin/backlinks.py query .wiki/pages <slug>
-```
+1. **Update reverse index**: `python3 bin/backlinks.py update .wiki/pages <slug>`
+2. **Query backlinks**: `python3 bin/backlinks.py query .wiki/pages <slug>` — find pages that should link back
+3. **Update related fields**: For each page linking to this slug that lacks a `related:` entry, update its frontmatter to include the slug
+4. **Add backlinks to new page**: Read the new page's `[[wiki-links]]`, ensure target pages have `related: [<slug>]`
+5. **Detect unlinked mentions**: `python3 bin/mentions.py .wiki/pages <slug>` — find text matching the page title without `[[wiki-link]]` syntax
 
-### 3. Update Related Fields
-For each page that links to the new/updated page:
-- Read the page's frontmatter
-- Add the new slug to `related:` if not already present
-- Add `[[<slug>]]` to the Related section if not already present
+### Full Rebuild (on-demand)
+Triggered by `/wiki-maintain` or explicit request.
 
-### 4. Detect Unlinked Mentions
-```bash
-python3 bin/mentions.py .wiki/pages <slug>
-```
-For each unlinked mention found:
-- Convert the plain text mention to a `[[wiki-link]]`
-- Only convert if the mention clearly refers to the wiki page (avoid false positives)
-
-### 5. Full Rebuild (on demand)
-When called with `mode: rebuild`:
-```bash
-python3 bin/backlinks.py update .wiki/pages
-```
-Rebuild the entire reverse index and fix all missing backlinks across the wiki.
+1. **Rebuild entire index**: `python3 bin/backlinks.py build .wiki/pages`
+2. **Scan all pages** for missing `related:` entries
+3. **Fix bidirectional links**: If A links to B, ensure B's `related:` includes A
+4. **Report orphans**: Pages with zero incoming links
 
 ## Rules
-- Run quickly — this is a post-write maintenance task, not a heavy operation
-- Don't modify page content beyond adding links and updating `related:` fields
-- Preserve existing formatting when adding links
-- Log changes to `.wiki/log.md`
-- Report: backlinks updated, related fields modified, unlinked mentions converted
+- Run autonomously — no confirmation needed
+- Never remove existing `related:` entries — only add
+- Unlinked mentions are reported, not auto-linked (content changes need wiki-writer)
+- Report: backlinks updated, related entries added, unlinked mentions found, orphans detected

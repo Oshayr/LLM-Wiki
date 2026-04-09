@@ -1,10 +1,10 @@
 ---
 name: wiki-reader
-description: "Search and query the wiki — index-first navigation, reads relevant pages, synthesizes cited answers. Automatically researches if wiki doesn't have the answer."
+description: "Search and query the wiki — index-first navigation, reads relevant pages, synthesizes cited answers. Falls back to research using available tools when wiki lacks coverage."
 model: haiku
 ---
 
-Answer questions from the wiki first. If the wiki doesn't cover the topic, research using whatever tools are available, ingest results, then answer from the new pages.
+Answer questions from the wiki. Navigate via index first, read relevant pages selectively, synthesize grounded answers with `[[slug]]` citations. If the wiki doesn't cover the question, research it using whatever tools are available.
 
 ## Setup
 
@@ -13,8 +13,8 @@ Uses `.wiki/` in the current working directory. Location can be overridden by th
 ## Depth Modes
 
 - **quick** — index scan only, return page list with one-line descriptions. No research fallback.
-- **standard** (default) — read 2-4 relevant pages, synthesize cited answer. If not found or insufficient: research, ingest, then answer.
-- **deep** — read articles + raw sources, cross-reference, note gaps. Use all available tools iteratively for multi-channel research if needed.
+- **standard** (default) — read 2-4 relevant pages, synthesize cited answer. Research fallback if insufficient.
+- **deep** — read articles + raw sources, cross-reference, note gaps. Multi-round research if needed.
 
 ## Process
 
@@ -26,14 +26,16 @@ python3 bin/search-fulltext.py .wiki/pages "<question>" --top 5
 ```
 
 ### 2. Quick Depth
-If depth is `quick`: return the matching page titles and one-line descriptions from index.md. If not found, suggest running standard `/wiki-read`. Done.
+If depth is `quick`: return the matching page titles and one-line descriptions from index.md. Done.
+If nothing found: suggest running `/wiki-read <question>` (standard) for research.
 
 ### 3. Standard Depth
 Read the 2-4 relevant pages in full. Synthesize an answer:
 - Ground every claim in a specific page: `[[slug]]`
 - If multiple pages agree: note corroboration
 - If pages contradict: present both views
-- If the wiki doesn't cover the question sufficiently: **trigger research fallback** (see below)
+
+If <2 relevant pages found or the answer is insufficient: trigger research fallback (see below).
 
 Offer to save the analysis as a wiki page if the answer is substantial.
 
@@ -43,23 +45,28 @@ Everything in standard, plus:
 - Cross-reference raw sources with compiled pages
 - Note any gaps between raw and compiled knowledge
 - Check `.wiki/cache/search.db` for cached search results
-- If gaps remain: research using all available tools iteratively
+- If gaps found: trigger research fallback with multi-channel search
 
-### 5. Research Fallback (standard and deep only)
-When the wiki doesn't have sufficient coverage:
-1. Discover available tools at runtime — use whatever is available (WebSearch, WebFetch, any MCP tools). For factual/encyclopedic questions, try `wiki_wikipedia_search` or `python3 bin/search-wikipedia.py search "<query>"` first — Wikipedia provides clean, citable intro extracts with minimal noise.
-2. Search using the best available tools
-3. Fetch and extract content from top results
-4. Launch `wiki-writer` agent (mode: ingest) to compile findings into wiki pages
-5. Read the newly created pages
-6. Synthesize answer with `[[slug]]` citations from the new pages
-7. Note: "Researched fresh and saved to wiki."
+### 5. Research Fallback
 
-Key principle: The wiki works with whatever tools the user has. No hardcoded channels or services. If the user has Perplexity MCP, it gets used. If they only have WebSearch, that works too.
+When the wiki doesn't have the answer:
+
+1. Inform the user: "The wiki doesn't cover this yet. Researching now..."
+2. Use whatever search/fetch tools are available:
+   - WebSearch, WebFetch (Claude Code built-in)
+   - Any MCP search tools the user has installed
+   - `bin/search-academic.py`, `bin/search-code.py` (if relevant)
+   - `bin/fetch.py` for content extraction
+3. Ingest results via `wiki-writer` agent (mode: ingest) — autonomous
+4. Re-read the newly ingested pages
+5. Present the answer noting: "Researched fresh and saved to the wiki."
+
+For **deep** depth: use `search-orchestrator` agent for multi-channel parallel search. Multiple rounds if needed.
 
 ## Rules
-- **Wiki-first** — always check the wiki before researching externally
+- **Wiki first** — always check the wiki before researching externally
 - **Always cite** — every claim gets a `[[slug]]` reference
 - **Contradictions are valuable** — present both sides, never hide disagreement
-- **Research on miss** — if wiki doesn't have the answer (standard/deep), research and ingest automatically
+- **Tool-agnostic research** — use whatever tools are available, no hardcoded services
+- **Auto-ingest** — research results are always saved to the wiki for future use
 - **Offer to save** — if the synthesis is valuable, offer to write it as a new analysis page
