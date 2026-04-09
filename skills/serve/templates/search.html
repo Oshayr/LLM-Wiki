@@ -11,11 +11,11 @@
     {% endif %}
 
     {% if results %}
-    <p class="wiki-result-count">Found {{ total }} result{% if total != 1 %}s{% endif %}</p>
+    <p class="wiki-result-count" aria-live="polite">Found {{ total }} result{% if total != 1 %}s{% endif %}</p>
 
-    <div class="wiki-search-results">
+    <div class="wiki-search-results" role="list" aria-label="Search results">
         {% for result in results %}
-        <div class="wiki-search-result">
+        <div class="wiki-search-result" role="listitem">
             <h2>
                 <a href="/wiki/{{ result.slug }}" class="wiki-result-title">{{ result.title }}</a>
             </h2>
@@ -60,14 +60,15 @@
     <!-- Search Again -->
     <div class="wiki-search-again">
         <h3>Search Again</h3>
-        <form action="/search" method="GET">
+        <form action="/search" method="GET" role="search" aria-label="Search again">
             <input
-                type="text"
+                type="search"
                 name="q"
                 class="wiki-search-input"
                 value="{{ query }}"
                 placeholder="Enter a new search..."
                 autocomplete="off"
+                aria-label="Search query"
             >
             <button type="submit" class="wiki-btn wiki-btn-primary">Search</button>
         </form>

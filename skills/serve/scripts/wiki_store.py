@@ -35,6 +35,14 @@ VALID_TYPES = {
     "source",
     "entity",
     "concept",
+    "idea",
+    "brainstorming",
+    "status",
+    "rules",
+    "config",
+    "skill",
+    "memory",
+    "reference",
     "analysis",
     "comparison",
     "research-scan",
@@ -45,6 +53,7 @@ VALID_TYPES = {
     "documentation",
     "automation",
     "lint",
+    "daily-note",
 }
 
 
@@ -237,9 +246,17 @@ class WikiStore:
             # Extract summary (first paragraph)
             summary = self._extract_summary(body)
 
-            # Get modification time
-            stat = md_file.stat()
-            updated_at = datetime.fromtimestamp(stat.st_mtime).isoformat()
+            # Prefer frontmatter updated: date; fall back to filesystem mtime
+            fm_updated = frontmatter.get("updated", "")
+            if fm_updated:
+                try:
+                    updated_at = datetime.strptime(fm_updated, "%Y-%m-%d").isoformat()
+                except ValueError:
+                    stat = md_file.stat()
+                    updated_at = datetime.fromtimestamp(stat.st_mtime).isoformat()
+            else:
+                stat = md_file.stat()
+                updated_at = datetime.fromtimestamp(stat.st_mtime).isoformat()
 
             # Store in database
             cursor = self.db.cursor()
@@ -678,47 +695,75 @@ class WikiStore:
         with self.lock:
             self._refresh_all_internal()
 
-    def get_stale_pages(
-        self, days: int = 90, fast_moving_topics: list[str] | None = None
-    ) -> list[dict[str, Any]]:
-        """
-        Get pages older than N days. Fast-moving topics use a shorter threshold (30 days).
+    # Freshness tier keyword mapping for auto-classification
+    FRESHNESS_TIERS = {
+        "live": {"ttl_days": 0.01, "keywords": {"stock", "price", "live", "score", "deploy", "status", "uptime"}},
+        "breaking": {"ttl_days": 0.25, "keywords": {"breaking", "incident", "outage", "release", "announcement"}},
+        "current": {"ttl_days": 3, "keywords": {"news", "trending", "current", "today", "election", "event"}},
+        "fast": {"ttl_days": 28, "keywords": {"ai", "llm", "gpt", "claude", "mcp", "agent", "api", "sdk", "benchmark", "model"}},
+        "moderate": {"ttl_days": 90, "keywords": {"version", "framework", "library", "tool", "package", "software"}},
+        "standard": {"ttl_days": 180, "keywords": set()},
+        "academic": {"ttl_days": 365, "keywords": {"paper", "study", "journal", "peer-reviewed", "thesis", "arxiv"}},
+        "evergreen": {"ttl_days": 1825, "keywords": {"history", "biography", "theorem", "law", "principle", "foundational"}},
+        "permanent": {"ttl_days": float("inf"), "keywords": {"personal", "note", "idea", "memory", "journal", "diary"}},
+    }
 
-        Args:
-            days: Staleness threshold in days (default 90)
-            fast_moving_topics: Keywords like ['ai', 'llm', 'mcp'] that indicate fast-moving content
+    def _classify_page_freshness(self, page: dict) -> tuple[str, float]:
+        """Classify a page into a freshness tier. Returns (tier_name, ttl_days)."""
+        content = page.get("content_md", "").lower()
+        title = page.get("title", "").lower()
+        combined = f"{content} {title}"
+
+        def _has_keyword(kw: str) -> bool:
+            return bool(re.search(r"\b" + re.escape(kw) + r"\b", combined))
+
+        for tier_name in ["live", "breaking", "current", "fast", "moderate",
+                          "academic", "evergreen", "permanent"]:
+            tier = self.FRESHNESS_TIERS[tier_name]
+            if tier["keywords"] and any(_has_keyword(kw) for kw in tier["keywords"]):
+                return tier_name, tier["ttl_days"]
+
+        return "standard", self.FRESHNESS_TIERS["standard"]["ttl_days"]
+
+    def get_stale_pages(self, **kwargs) -> list[dict[str, Any]]:
+        """
+        Get pages past their freshness tier TTL.
+
+        Uses intelligent freshness tiers instead of a flat threshold:
+        live=15m, breaking=6h, current=3d, fast=4w, moderate=3mo,
+        standard=6mo, academic=1y, evergreen=5y, permanent=never.
 
         Returns:
-            List of stale pages with full metadata
+            List of stale pages with full metadata and freshness_tier info
         """
         with self.lock:
             cursor = self.db.cursor()
-            cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
-            fast_cutoff_date = (datetime.now() - timedelta(days=30)).isoformat()
-
-            # Get all pages with their metadata
             cursor.execute("SELECT * FROM pages ORDER BY updated_at ASC")
             all_pages = [dict(row) for row in cursor.fetchall()]
 
+            now = datetime.now()
             stale_pages = []
             for page in all_pages:
                 updated_at = page.get("updated_at", "")
-                title = page.get("title", "").lower()
-                content = page.get("content_md", "").lower()
+                if not updated_at:
+                    continue
 
-                # Check if page matches fast-moving topics
-                is_fast_moving = False
-                if fast_moving_topics:
-                    for topic in fast_moving_topics:
-                        if topic.lower() in title or topic.lower() in content:
-                            is_fast_moving = True
-                            break
+                try:
+                    updated_dt = datetime.fromisoformat(updated_at)
+                except (ValueError, TypeError):
+                    continue
 
-                # Determine staleness threshold
-                threshold = fast_cutoff_date if is_fast_moving else cutoff_date
+                tier_name, ttl_days = self._classify_page_freshness(page)
 
-                # Page is stale if older than threshold
-                if updated_at < threshold:
+                # permanent tier never goes stale
+                if ttl_days == float("inf"):
+                    continue
+
+                age_days = (now - updated_dt).total_seconds() / 86400
+                if age_days > ttl_days:
+                    page["freshness_tier"] = tier_name
+                    page["ttl_days"] = ttl_days
+                    page["age_days"] = round(age_days, 1)
                     stale_pages.append(page)
 
             return stale_pages

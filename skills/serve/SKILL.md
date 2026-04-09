@@ -3,7 +3,7 @@ name: wiki-serve
 description: "Start the wiki web server — browsable Wikipedia-style UI with live research, split-pane editor, AI assist, and themes. Manual trigger only: /wiki-serve, 'start wiki server', 'browse the wiki'."
 ---
 
-# Serve
+# Wiki Serve
 
 Launch a local web server that presents the wiki as a browsable, Wikipedia-style website with live background research, integrated chat, and a split-pane editor with AI assist.
 

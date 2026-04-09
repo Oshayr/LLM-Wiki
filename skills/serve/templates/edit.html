@@ -13,16 +13,16 @@
     </div>
 
     <!-- Markdown Toolbar -->
-    <div class="wiki-md-toolbar">
-        <button data-md="bold" title="Bold (Ctrl+B)"><b>B</b></button>
-        <button data-md="italic" title="Italic (Ctrl+I)"><i>I</i></button>
-        <button data-md="heading" title="Heading">H2</button>
-        <button data-md="link" title="Link">Link</button>
-        <button data-md="image" title="Image">Img</button>
-        <button data-md="code" title="Code">Code</button>
-        <button data-md="list" title="Bullet list">List</button>
-        <button data-md="wikilink" title="Wiki link [[slug]]">[[]]</button>
-        <button data-md="table" title="Insert table">Table</button>
+    <div class="wiki-md-toolbar" role="toolbar" aria-label="Markdown formatting">
+        <button data-md="bold" title="Bold (Ctrl+B)" aria-label="Bold"><b>B</b></button>
+        <button data-md="italic" title="Italic (Ctrl+I)" aria-label="Italic"><i>I</i></button>
+        <button data-md="heading" title="Heading" aria-label="Heading">H2</button>
+        <button data-md="link" title="Link (Ctrl+K)" aria-label="Insert link">Link</button>
+        <button data-md="image" title="Image" aria-label="Insert image">Img</button>
+        <button data-md="code" title="Code" aria-label="Insert code">Code</button>
+        <button data-md="list" title="Bullet list" aria-label="Insert list">List</button>
+        <button data-md="wikilink" title="Wiki link [[slug]]" aria-label="Insert wiki link">[[]]</button>
+        <button data-md="table" title="Insert table" aria-label="Insert table">Table</button>
     </div>
 
     <!-- Split editor: markdown + live preview -->
@@ -55,10 +55,10 @@
     </div>
 
     <div class="wiki-editor-footer">
-        <span class="wiki-editor-hint">Markdown supported. Use [[slug]] for wiki links, ![alt](url) for images. Ctrl+S to save.</span>
+        <span class="wiki-editor-hint">Markdown supported. Use [[slug]] for wiki links, ![alt](url) for images. <kbd>Ctrl+S</kbd> save, <kbd>Ctrl+B</kbd> bold, <kbd>Ctrl+I</kbd> italic, <kbd>Ctrl+K</kbd> link.</span>
     </div>
 </div>
 
-<script src="/static/editor.js?v=10"></script>
+<script src="/static/editor.js?v=11"></script>
 <script>initEditor('{{ slug }}');</script>
 {% endblock %}

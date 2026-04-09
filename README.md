@@ -2,7 +2,9 @@
 
 LLM-powered personal wiki for [Claude Code](https://claude.ai/claude-code) — an autonomous knowledge base with full-text search, multi-channel research, spaced repetition, knowledge graph visualization, and a Wikipedia-style web UI.
 
-Inspired by [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): raw sources are immutable, the LLM maintains the wiki layer, and a schema governs behavior. Knowledge compounds over time.
+**An autonomous knowledge base that grows as you work.** LLM Wiki is a [Claude Code](https://claude.ai/claude-code) plugin that captures research, ideas, and decisions into an interlinked wiki with semantic search, automatic research, and a Wikipedia-style web UI. Knowledge compounds over time — the more you use it, the smarter it gets.
+
+Inspired by [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): raw sources are immutable, the LLM maintains the wiki layer, and a schema governs behavior.
 
 ## Features
 
@@ -22,15 +24,15 @@ Inspired by [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpath
 - Fact-checking pipeline — extract claims, verify against external sources, track verification status
 - Source credibility scoring with tiered ranking
 
-**Web UI**
-- Wikipedia-style browsable website with 4 themes (light, dark, terminal, wikipedia)
-- Interactive knowledge graph (Cytoscape.js) with multiple layouts, clustering, and neighborhood highlighting
-- Canvas/whiteboard view for spatial page arrangement
-- Split-pane markdown editor with live preview and AI assist
-- Live research — click any red link to auto-research the topic
-- Spaced repetition review interface (FSRS-based scheduling)
-- Content gap analysis dashboard
-- WebSocket chat sidebar with RAG-augmented Q&A
+### Web UI
+- **Wikipedia-style browsable website** with 4 themes (light, dark, terminal, wikipedia)
+- **Interactive knowledge graph** ([Cytoscape.js](https://js.cytoscape.org/)) with multiple layouts, clustering, and neighborhood highlighting
+- **Canvas/whiteboard view** for spatial page arrangement
+- **Split-pane markdown editor** with live preview and AI assist
+- **Live research** — click any red link to auto-research the topic
+- **Spaced repetition** review interface ([FSRS](https://github.com/open-spaced-repetition/fsrs4anki)-based scheduling)
+- **Content gap analysis** dashboard
+- **WebSocket chat** sidebar with RAG-augmented Q&A
 
   **Server Launch:** The web server runs only when explicitly invoked via `/wiki-serve` skill or manually via CLI:
   ```bash
@@ -46,19 +48,19 @@ Inspired by [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpath
 - Structured logging (JSON or text) via `wiki_logging.py` with custom exception hierarchy
 - Activity logging with attribution and history tracking
 
-## Install
+## Quick Start
 
 ```bash
 # Copy into your Claude Code plugins directory
 cp -r llm-wiki .claude/plugins/
 
-# Install dependencies (web server + MCP server)
+# Install dependencies
 pip install -r .claude/plugins/llm-wiki/requirements.txt
 ```
 
 The `.wiki/` data directory is created automatically on first use.
 
-### Verify Installation
+## Skills Reference
 
 After installing, restart Claude Code. The plugin provides 6 slash commands (`/wiki-write`, `/wiki-read`, `/wiki-research`, `/wiki-serve`, `/wiki-maintain`, `/wiki-view`) and 9 agents that activate automatically based on context.
 
@@ -104,22 +106,97 @@ Wiki data lives in `.wiki/` in the current working directory. Location can be ov
   raw/            Immutable source materials (web, papers, code, transcripts)
 ```
 
-Each page has frontmatter: `title`, `type`, `confidence` (high/medium/low), `sources`, `tags`, `created`, `updated`.
+### Frontmatter Schema
 
-Compatible with Obsidian — open `.wiki/` as a vault for graph visualization and editing.
+```yaml
+---
+title: "Page Title"
+type: concept|entity|source|analysis|idea|status|rules|config|skill|memory
+confidence: high|medium|low
+sources: [source-slug-1, source-slug-2]
+related: [related-slug-1, related-slug-2]
+tags: [tag1, tag2]
+freshness_tier: standard  # optional override
+created: 2025-01-15
+updated: 2025-01-15
+---
+```
 
-## How It Works
+### Freshness Tiers
 
-1. **You work normally** — Claude saves relevant knowledge to the wiki automatically
-2. **Wiki grows** — research, ideas, decisions, and patterns accumulate as interlinked pages
-3. **Wiki serves you** — Claude checks the wiki first when you ask questions, citing sources
-4. **Wiki maintains itself** — periodic lint, dedup, confidence upgrades, stale detection
+| Tier | TTL | Examples |
+|------|-----|----------|
+| `live` | 15 min | stock prices, live scores, server status |
+| `breaking` | 1-6 hours | breaking news, incident updates |
+| `current` | 1-3 days | news articles, current events |
+| `fast` | 1-4 weeks | AI/LLM/MCP, API changes, benchmarks |
+| `moderate` | 1-3 months | software versions, frameworks |
+| `standard` | 6 months | general knowledge, how-to guides (default) |
+| `academic` | 1 year | research papers, studies |
+| `evergreen` | 5 years | history, biographies, theorems |
+| `permanent` | never | personal notes, ideas, memories |
 
-## MCP Server
+## Web UI
 
-The plugin includes an MCP server (`mcp/wiki-mcp-server.py`) exposing wiki operations as tools:
+Start with `/wiki-serve` — opens at `localhost:8420`:
 
-`wiki_search`, `wiki_read`, `wiki_write`, `wiki_list`, `wiki_backlinks`, `wiki_stats`, `wiki_query`, `wiki_gaps`, `wiki_daily`
+- **Home** — recent pages, quick stats, search
+- **Page view** — rendered markdown with backlinks sidebar, annotations
+- **Editor** — split-pane markdown + live preview with AI assist toolbar
+- **Knowledge graph** — interactive Cytoscape.js visualization with layout options
+- **Canvas** — spatial whiteboard for arranging pages
+- **Search** — full-text search with snippets
+- **Stats** — page count, type/confidence distributions
+- **Gaps** — content gap analysis dashboard
+- **Review** — spaced repetition flashcard interface
+- **Research dashboard** — background research task queue
+
+## Agents
+
+| Agent | Model | Purpose |
+|-------|-------|---------|
+| `wiki-writer` | Sonnet | Create/update pages — autonomous ingest and update |
+| `wiki-reader` | Haiku | Search wiki, synthesize cited answers, research on miss |
+| `wiki-auditor` | Haiku | Lint, dedup, fix broken links, upgrade confidence |
+| `backlink-manager` | Haiku | Maintain reverse index, update related fields, detect unlinked mentions |
+| `search-orchestrator` | Sonnet | Classify complexity, fan out to channels, rank results |
+| `search-channel` | Haiku | Execute searches per channel (web, academic, code, docs) |
+| `research-loop` | Sonnet | Iterative research with git-based rollback (max 3 iterations) |
+| `research-processor` | Haiku | Condense and deduplicate parallel research results |
+| `fact-checker` | Sonnet | Verify claims against external sources |
+| `citation-explorer` | Sonnet | Academic citation graph snowballing |
+
+## MCP Tools
+
+The plugin includes an MCP server exposing wiki operations:
+
+| Tool | Description |
+|------|-------------|
+| `wiki_search` | Hybrid semantic + keyword search |
+| `wiki_read` | Read a page by slug |
+| `wiki_write` | Create or update a page |
+| `wiki_list` | List pages, optionally filtered by type |
+| `wiki_backlinks` | Get backlinks + unlinked mentions |
+| `wiki_stats` | Page count, type/confidence distributions |
+| `wiki_query` | Dataview-style frontmatter queries |
+| `wiki_gaps` | Content gap analysis |
+| `wiki_daily` | Create/get today's daily note |
+| `wiki_wikipedia_search` | Search Wikipedia via MediaWiki Action API |
+
+## Compatibility
+
+- **Obsidian** — open `.wiki/` as a vault for graph visualization and editing
+- **Any MCP tools** — the wiki discovers available tools at runtime (Perplexity, Context7, etc.)
+- **Git** — wiki changes are tracked, with auto-commit and rollback support
+
+## Credits
+
+- [Andrej Karpathy's LLM Wiki gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) — the original pattern
+- [FSRS](https://github.com/open-spaced-repetition/fsrs4anki) — spaced repetition scheduling algorithm
+- [Cytoscape.js](https://js.cytoscape.org/) — knowledge graph visualization
+- [FastMCP](https://github.com/jlowin/fastmcp) — MCP server framework
+- [FastAPI](https://fastapi.tiangolo.com/) — web server framework
+- [markdown-it](https://github.com/markdown-it/markdown-it) — markdown rendering
 
 ## License
 

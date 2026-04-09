@@ -84,10 +84,11 @@ After merging, find other pages referencing the same entities:
 - Add cross-references, update factual claims, flag contradictions
 - Log cascade in log.md
 
-### 8. Backlink Audit
-- `python3 bin/backlinks.py update .wiki/pages <slug>` — update reverse index
-- `python3 bin/backlinks.py query .wiki/pages <slug>` — find pages to link back
-- Add `[[<slug>]]` to their Related sections
+### 8. Delegate Backlink Audit
+After writing pages, delegate backlink maintenance to the `backlink-manager` agent:
+- It runs `bin/backlinks.py update` + `bin/backlinks.py query` to maintain the reverse index
+- It updates `related:` fields on linked pages
+- It runs `bin/mentions.py` for unlinked mention detection
 
 ### 9. Update index.md
 Add new pages under appropriate categories. Update page count.
@@ -123,6 +124,6 @@ Before writing shared files (index.md, overview.md, log.md):
 - **Update mode: NEVER pause** — runs end-to-end autonomously
 - **Never fabricate** — every claim traces to source
 - **Flag contradictions** — never silently overwrite
-- **Backlinks are mandatory**
+- **Backlinks are mandatory** — delegate to backlink-manager agent
 - **Confidence requires justification**
 - Report: pages written, pages updated, new backlinks, confidence assigned

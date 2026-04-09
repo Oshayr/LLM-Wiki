@@ -3,7 +3,7 @@ name: wiki-maintain
 description: "Wiki maintenance — lint broken links, merge near-duplicates, upgrade confidence, flag stale pages, gap analysis, concept synthesis. Use on: 'wiki maintenance', 'wiki cleanup', 'fix wiki', 'wiki health', 'check wiki', 'consolidate wiki'."
 ---
 
-# Maintain
+# Wiki Maintain
 
 Comprehensive wiki maintenance: lint, deduplicate, upgrade, and analyze.
 
@@ -42,9 +42,28 @@ Pages with 3+ independent sources in frontmatter get upgraded:
 - Run `fact-checker` agent on high-confidence pages to verify claims against external sources
 - Write the reason in log.md
 
-### 4. Stale Detection
+### 4. Stale Detection (Freshness Tiers)
 
-Pages with `updated:` date >90 days old:
+Pages are evaluated against an intelligent freshness system — not a flat threshold. Each page has a TTL based on its content type:
+
+| Tier | TTL | Examples |
+|------|-----|----------|
+| `live` | 15 min | stock prices, live scores, server status, deployment state |
+| `breaking` | 1-6 hours | breaking news, incident updates, release announcements |
+| `current` | 1-3 days | news articles, current events, trending topics |
+| `fast` | 1-4 weeks | AI/LLM/MCP, API changes, model benchmarks |
+| `moderate` | 1-3 months | software versions, frameworks, libraries, tools |
+| `standard` | 6 months | general knowledge, how-to guides (default) |
+| `academic` | 1 year | research papers, studies, formal publications |
+| `evergreen` | 5 years | history, biographies, foundational concepts, laws, theorems |
+| `permanent` | never | personal notes, ideas, memories, journal entries |
+
+Resolution order:
+1. Explicit `freshness_tier:` in page frontmatter (user override)
+2. Explicit `ttl:` in frontmatter (custom duration like `ttl: 30m` or `ttl: 2d`)
+3. Auto-classification from tags, type, and content keywords
+
+For stale pages:
 - Add `stale: true` to frontmatter
 - Suggest running `/wiki-research refresh <slug>` for fast-moving topics
 

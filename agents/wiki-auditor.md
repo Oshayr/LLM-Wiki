@@ -30,14 +30,18 @@ Compare all page slugs using Jaccard similarity on word tokens (split by `-`). F
 ### 6. Concept Auto-Generation
 Find groups of 3+ pages that share common `[[wiki-links]]` targets. Suggest synthesis articles that connect these clusters.
 
-### 7. Remove Dead Index Entries
+### 7. Delegate Backlink Checks
+Delegate backlink auditing to the `backlink-manager` agent for thorough reverse index maintenance and unlinked mention detection.
+
+### 8. Remove Dead Index Entries
 Read `.wiki/index.md`. Remove entries pointing to pages that no longer exist.
 
-### 8. Fix Inline
+### 9. Fix Inline
 Apply all fixes directly to the files. No separate report file. Print a summary of what was fixed.
 
 ## Rules
 - Fix structural issues silently (frontmatter, dead index entries)
 - Flag but don't auto-merge duplicates (requires user review)
 - Flag but don't auto-delete orphans (they may be valuable)
+- Delegate backlink maintenance to backlink-manager agent
 - Report: broken links fixed, frontmatter added, orphans found, duplicates flagged, concepts suggested

@@ -3,7 +3,7 @@ name: wiki-view
 description: "Wiki dashboard — browse pages, view stats, knowledge graph, export. Use on: 'wiki dashboard', 'wiki stats', 'show wiki', 'wiki pages', 'list wiki', 'wiki graph', 'export wiki', 'wiki overview'."
 ---
 
-# View
+# Wiki View
 
 Dashboard, graph visualization, stats, and export for the wiki.
 

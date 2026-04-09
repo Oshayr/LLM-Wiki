@@ -3,7 +3,7 @@ name: wiki-write
 description: "Add or update wiki content — autonomous ingest from URL, file, or text; update existing pages autonomously. Auto-creates .wiki/ on first use. Use when: 'save to wiki', 'remember this', 'note this', 'store this', 'add to knowledge base', 'save findings', 'save research', 'save idea', 'write to wiki', 'ingest', 'add page', 'update page'."
 ---
 
-# Write
+# Wiki Write
 
 Add or update content in the wiki. Auto-creates `.wiki/` if it doesn't exist.
 
