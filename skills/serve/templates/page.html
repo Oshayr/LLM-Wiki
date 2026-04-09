@@ -6,19 +6,19 @@
 <div class="wiki-page-wrapper">
     <!-- Table of Contents (Right Side) -->
     {% if page.toc_html %}
-    <div class="wiki-toc">
+    <aside class="wiki-toc" aria-label="Table of contents">
         <div class="wiki-toc-header">
-            <h3>Contents</h3>
-            <button class="wiki-toc-toggle" aria-label="Toggle table of contents">▼</button>
+            <h3 id="toc-heading">Contents</h3>
+            <button class="wiki-toc-toggle" aria-label="Toggle table of contents" aria-expanded="true" aria-controls="toc-nav">&#9660;</button>
         </div>
-        <nav class="wiki-toc-content">
+        <nav class="wiki-toc-content" id="toc-nav" aria-labelledby="toc-heading">
             {{ page.toc_html|safe }}
         </nav>
-    </div>
+    </aside>
     {% endif %}
 
     <!-- Main Page Content -->
-    <div class="wiki-page-content">
+    <article class="wiki-page-content">
         <!-- Page Title -->
         <h1 class="wiki-page-title">{{ page.title }}</h1>
 
@@ -201,6 +201,6 @@
             </p>
         </div>
         {% endif %}
-    </div>
+    </article>
 </div>
 {% endblock %}

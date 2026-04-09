@@ -20,9 +20,10 @@ except ImportError:
     sys.exit(1)
 
 
-# Determine wiki directory
+# Determine wiki directory from plugin install scope
+PLUGIN_ROOT = Path(__file__).parent.parent
+BIN_DIR = PLUGIN_ROOT / "bin"
 WIKI_DIR = None
-BIN_DIR = Path(__file__).parent.parent / "bin"
 
 for arg in sys.argv:
     if arg.startswith("--wiki-dir="):
@@ -31,15 +32,28 @@ for arg in sys.argv:
         WIKI_DIR = Path(sys.argv[sys.argv.index(arg) + 1])
 
 if not WIKI_DIR:
-    # Try to find .wiki in common locations
-    for candidate in [Path(".wiki"), Path("../.wiki"), Path.home() / ".wiki"]:
-        if candidate.exists():
-            WIKI_DIR = candidate
-            break
+    # Resolve from plugin install scope:
+    # - If PLUGIN_ROOT is under ~/.claude/ → user-level → ~/.wiki/
+    # - Otherwise → project-level → .wiki/ at project root (next to .git/)
+    home_claude = Path.home() / ".claude"
+    try:
+        PLUGIN_ROOT.resolve().relative_to(home_claude.resolve())
+        # User-level install
+        WIKI_DIR = Path.home() / ".wiki"
+    except ValueError:
+        # Project-level install — .wiki/ at project root (PLUGIN_ROOT's ancestor with .git/)
+        candidate = PLUGIN_ROOT.resolve()
+        while candidate != candidate.parent:
+            if (candidate / ".git").exists():
+                WIKI_DIR = candidate / ".wiki"
+                break
+            candidate = candidate.parent
+        if not WIKI_DIR:
+            WIKI_DIR = Path.cwd() / ".wiki"
 
 mcp = FastMCP(
     "LLM Wiki",
-    description="Knowledge wiki with semantic search, research, and knowledge graph",
+    instructions="Knowledge wiki with semantic search, research, and knowledge graph",
 )
 
 
@@ -171,6 +185,21 @@ def wiki_gaps() -> str:
 def wiki_daily() -> str:
     """Create or get today's daily note."""
     return _run_bin("daily.py", ["today", str(_pages_dir())])
+
+
+@mcp.tool()
+def wiki_wikipedia_search(query: str, lang: str = "en", limit: int = 5) -> str:
+    """Search Wikipedia articles via the MediaWiki Action API.
+
+    Args:
+        query: Search query (factual, encyclopedic, historical, or scientific topics)
+        lang: Wikipedia language code (default: 'en'; use 'de', 'fr', 'es', etc.)
+        limit: Maximum number of results to return (default: 5)
+    """
+    return _run_bin(
+        "search-wikipedia.py",
+        ["search", query, "--top", str(limit), "--lang", lang],
+    )
 
 
 @mcp.resource("wiki://index")

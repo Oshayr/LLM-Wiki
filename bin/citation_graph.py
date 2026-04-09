@@ -70,7 +70,7 @@ class CitationGraph:
         """Make a GET request with rate limiting."""
         try:
             req = urllib.request.Request(url)
-            req.add_header("User-Agent", "llm-wiki/1.0 (mailto:wiki@example.com)")
+            req.add_header("User-Agent", "llm-wiki/1.0 (https://github.com/Oshayr/llm-wiki)")
             with urllib.request.urlopen(req, timeout=15) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:

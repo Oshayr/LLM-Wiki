@@ -23,7 +23,7 @@ The wiki at `.wiki/` is your persistent knowledge store. These rules apply to EV
 
 ## HOW to write:
 
-- Use the `wiki-writer` agent to create or update pages
+- Use `/wiki-write` or the `wiki-writer` agent to create or update pages
 - Auto-creates `.wiki/` if it doesn't exist yet
 - Every page needs YAML frontmatter: title, type, confidence, created, updated
 - Include `[[wiki-links]]` to connect related concepts
@@ -32,10 +32,10 @@ The wiki at `.wiki/` is your persistent knowledge store. These rules apply to EV
 
 ## HOW to read:
 
-- Use the `wiki-reader` agent to search and retrieve pages
+- Use `/wiki-read` or the `wiki-reader` agent to search and retrieve pages
 - Check `.wiki/index.md` for page listings
 - Use full-text search for specific queries
-- Three depths: quick (index), standard (articles), deep (everything + raw)
+- Three depths: quick (index only), standard (articles + auto-research if missing), deep (everything + raw + research)
 
 ## Page types and when to use them:
 

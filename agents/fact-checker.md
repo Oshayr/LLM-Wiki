@@ -26,6 +26,7 @@ You verify factual claims in wiki pages against external sources. You are thorou
    - Skip opinions, definitions, and subjective assessments
 3. **Verify each claim** — for each extracted claim:
    - Search for corroborating sources (WebSearch)
+   - For encyclopedic/factual topics (history, science, biographies, technical concepts), also check Wikipedia: `python3 bin/search-wikipedia.py summary "<claim_topic>"`
    - Check if the claim is still current (not outdated)
    - Look for contradicting information
    - Assign status: `verified`, `unverified`, `disputed`, `outdated`

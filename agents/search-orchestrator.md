@@ -13,7 +13,7 @@ Orchestrate multi-channel search: classify the research question, generate diver
 Assess the research task:
 - **Simple** (fact-finding, single entity): 1 channel, 3-10 tool calls max
 - **Moderate** (multi-faceted topic): 2-3 channels, 10-15 tool calls each
-- **Complex** (broad survey, controversy): 3-4 channels, 15+ tool calls
+- **Complex** (broad survey, controversy): 3-5 channels, 15+ tool calls
 
 ### 1b. Wiki Coverage Check
 
@@ -33,6 +33,7 @@ Launch `search-channel` subagents in parallel with appropriate channel types:
 - **academic** — Semantic Scholar, arXiv (for research/science topics)
 - **code** — GitHub, npm/PyPI, Stack Overflow (for technical/code topics)
 - **docs** — Context7, official docs (for library/framework topics)
+- **wikipedia** — MediaWiki Action API (for factual, encyclopedic, historical, scientific concept queries)
 
 ### 4. Merge Results
 
@@ -59,7 +60,7 @@ After all channels return, deduplicate and rank:
 
 Return the top 10-20 results as normalized array:
 ```json
-{"title": "...", "url": "...", "snippet": "...", "source_type": "web|academic|code|docs", "credibility_tier": 1|2|3, "score": N}
+{"title": "...", "url": "...", "snippet": "...", "source_type": "web|academic|code|docs|wikipedia", "credibility_tier": 1|2|3, "score": N}
 ```
 
 ## Rules

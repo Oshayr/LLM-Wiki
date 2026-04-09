@@ -89,7 +89,14 @@
     function scheduleReconnect() {
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
             reconnectAttempts++;
-            setTimeout(connect, RECONNECT_DELAY);
+            if (chatStatus) {
+                chatStatus.textContent = 'Reconnecting (' + reconnectAttempts + '/' + MAX_RECONNECT_ATTEMPTS + ')...';
+            }
+            setTimeout(connect, RECONNECT_DELAY * Math.min(reconnectAttempts, 3));
+        } else {
+            if (chatStatus) {
+                chatStatus.textContent = 'Connection lost. Refresh to retry.';
+            }
         }
     }
 
@@ -129,6 +136,9 @@
             timestamp = null
         } = messageData;
 
+        // Remove typing indicator if present
+        removeTypingIndicator();
+
         const messageDiv = document.createElement('div');
         messageDiv.className = 'wiki-chat-message ' + role;
 
@@ -137,6 +147,28 @@
         messageDiv.innerHTML = renderedContent;
 
         chatMessagesDiv.appendChild(messageDiv);
+
+        // Smooth scroll to bottom
+        chatMessagesDiv.scrollTo({
+            top: chatMessagesDiv.scrollHeight,
+            behavior: 'smooth'
+        });
+    }
+
+    function showTypingIndicator() {
+        removeTypingIndicator();
+        const indicator = document.createElement('div');
+        indicator.className = 'wiki-chat-message assistant wiki-typing-indicator';
+        indicator.innerHTML = '<span class="wiki-loading-inline"></span> Thinking...';
+        indicator.style.opacity = '0.7';
+        indicator.style.fontSize = '0.85em';
+        chatMessagesDiv.appendChild(indicator);
+        chatMessagesDiv.scrollTo({ top: chatMessagesDiv.scrollHeight, behavior: 'smooth' });
+    }
+
+    function removeTypingIndicator() {
+        var indicator = chatMessagesDiv.querySelector('.wiki-typing-indicator');
+        if (indicator) indicator.remove();
     }
 
     function renderMarkdown(text) {
@@ -189,6 +221,7 @@
 
         renderMessage(userMessage);
         chatInput.value = '';
+        showTypingIndicator();
 
         // Send to server via WebSocket (server expects {type: "message", content: "..."})
         ws.send(JSON.stringify({
@@ -201,6 +234,7 @@
         // Show user message immediately
         renderMessage({ role: 'user', content: content });
         if (chatInput) chatInput.value = '';
+        showTypingIndicator();
 
         fetch('/api/chat', {
             method: 'POST',
