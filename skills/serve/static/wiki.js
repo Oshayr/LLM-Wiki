@@ -38,16 +38,38 @@
             setTimeout(closeAutocomplete, 200);
         });
 
-        // Handle Enter key
+        // Handle keyboard navigation in autocomplete
         searchInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
+            if (!autocompleteDropdown) {
+                return;
+            }
+            var items = autocompleteDropdown.querySelectorAll('.wiki-autocomplete-item');
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                updateAutocompleteSelection(autocompleteDropdown);
+                if (items[selectedIndex]) items[selectedIndex].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, -1);
+                updateAutocompleteSelection(autocompleteDropdown);
+                if (selectedIndex >= 0 && items[selectedIndex]) items[selectedIndex].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'Enter' && selectedIndex >= 0 && items[selectedIndex]) {
+                e.preventDefault();
+                items[selectedIndex].click();
+            } else if (e.key === 'Escape') {
+                closeAutocomplete();
+            } else if (e.key === 'Enter') {
                 closeAutocomplete();
             }
         });
     }
 
+    let selectedIndex = -1;
+
     function showAutocomplete(query, suggestions) {
         closeAutocomplete();
+        selectedIndex = -1;
 
         if (suggestions.length === 0) {
             return;
@@ -55,40 +77,53 @@
 
         const dropdown = document.createElement('div');
         dropdown.className = 'wiki-autocomplete-dropdown';
+        dropdown.setAttribute('role', 'listbox');
+        dropdown.setAttribute('aria-label', 'Search suggestions');
         dropdown.style.cssText = `
             position: absolute;
             top: 100%;
             left: 0;
             right: 0;
-            background: white;
-            border: 1px solid #a2a9b1;
+            background: var(--wiki-bg, white);
+            border: 1px solid var(--wiki-border, #a2a9b1);
             border-top: none;
-            border-radius: 0 0 3px 3px;
+            border-radius: 0 0 8px 8px;
             max-height: 300px;
             overflow-y: auto;
             z-index: 1000;
+            box-shadow: 0 4px 16px var(--wiki-shadow-md, rgba(0,0,0,0.12));
+            opacity: 0;
+            transform: translateY(-4px);
+            transition: opacity 0.15s ease, transform 0.15s ease;
         `;
 
-        suggestions.forEach(suggestion => {
+        suggestions.forEach(function(suggestion, idx) {
             const item = document.createElement('div');
             item.className = 'wiki-autocomplete-item';
+            item.setAttribute('role', 'option');
             item.style.cssText = `
-                padding: 8px 12px;
+                padding: 10px 14px;
                 cursor: pointer;
-                border-bottom: 1px solid #e8eaed;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-                font-size: 0.95em;
+                border-bottom: 1px solid var(--wiki-border-light, #e8eaed);
+                font-family: var(--wiki-font-ui, sans-serif);
+                font-size: 0.9em;
+                transition: background-color 0.1s ease;
+                color: var(--wiki-text, #1a1a1a);
             `;
 
+            // Escape query for regex safety
+            const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const highlightedText = suggestion.title.replace(
-                new RegExp(`(${query})`, 'gi'),
+                new RegExp('(' + escaped + ')', 'gi'),
                 '<strong>$1</strong>'
             );
 
             item.innerHTML = highlightedText;
 
             item.addEventListener('mouseenter', function() {
-                item.style.backgroundColor = '#f0f2f5';
+                item.style.backgroundColor = 'var(--wiki-bg-hover, #f0f2f5)';
+                selectedIndex = idx;
+                updateAutocompleteSelection(dropdown);
             });
 
             item.addEventListener('mouseleave', function() {
@@ -110,7 +145,21 @@
             searchForm.style.position = 'relative';
             searchForm.appendChild(dropdown);
             autocompleteDropdown = dropdown;
+            // Trigger fade-in
+            requestAnimationFrame(function() {
+                dropdown.style.opacity = '1';
+                dropdown.style.transform = 'translateY(0)';
+            });
         }
+    }
+
+    function updateAutocompleteSelection(dropdown) {
+        if (!dropdown) return;
+        var items = dropdown.querySelectorAll('.wiki-autocomplete-item');
+        items.forEach(function(item, i) {
+            item.style.backgroundColor = i === selectedIndex ? 'var(--wiki-bg-hover, #f0f2f5)' : 'transparent';
+            item.setAttribute('aria-selected', i === selectedIndex ? 'true' : 'false');
+        });
     }
 
     function closeAutocomplete() {
@@ -144,9 +193,10 @@
             return;
         }
 
-        // Show spinner
+        // Show loading state
         button.disabled = true;
-        button.textContent = '⟳';
+        var origText = button.textContent;
+        button.innerHTML = '<span class="wiki-loading-inline"></span>Loading...';
 
         fetch('/api/expand', {
             method: 'POST',
@@ -158,22 +208,26 @@
         .then(response => response.json())
         .then(data => {
             if (data.status === 'done') {
-                // Expand is complete
+                // Expand is complete - fade in content
                 expandContainer.innerHTML = data.content_html || '';
                 expandContainer.style.display = 'block';
+                expandContainer.style.opacity = '0';
+                expandContainer.style.transition = 'opacity 0.3s ease';
+                requestAnimationFrame(function() { expandContainer.style.opacity = '1'; });
                 button.style.display = 'none';
             } else if (data.status === 'in_progress') {
                 // Poll for completion
                 pollExpandCompletion(expandId, button, expandContainer);
             } else {
                 button.disabled = false;
-                button.textContent = 'Expand';
+                button.textContent = origText || 'Expand';
             }
         })
         .catch(error => {
             console.error('Expand error:', error);
             button.disabled = false;
-            button.textContent = 'Expand';
+            button.textContent = 'Retry';
+            button.title = 'Expansion failed. Click to retry.';
         });
     }
 
@@ -218,15 +272,20 @@
     if (tocToggle) {
         tocToggle.addEventListener('click', function(e) {
             e.preventDefault();
-            const toc = document.querySelector('.wiki-toc');
             const content = document.querySelector('.wiki-toc-content');
 
             if (content.style.display === 'none') {
                 content.style.display = 'block';
-                tocToggle.textContent = '▼';
+                content.style.opacity = '0';
+                content.style.transition = 'opacity 0.2s ease';
+                requestAnimationFrame(function() { content.style.opacity = '1'; });
+                tocToggle.textContent = '\u25BC';
+                tocToggle.setAttribute('aria-expanded', 'true');
             } else {
-                content.style.display = 'none';
-                tocToggle.textContent = '▶';
+                content.style.opacity = '0';
+                setTimeout(function() { content.style.display = 'none'; }, 200);
+                tocToggle.textContent = '\u25B6';
+                tocToggle.setAttribute('aria-expanded', 'false');
             }
         });
     }
@@ -617,6 +676,27 @@
     // ========================================================================
 
     console.log('LLM Wiki page script loaded');
+
+    // ========================================================================
+    // Global Keyboard Shortcuts
+    // ========================================================================
+
+    document.addEventListener('keydown', function(e) {
+        // Skip if user is typing in an input/textarea
+        var tag = (e.target.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) {
+            return;
+        }
+
+        // "/" to focus search
+        if (e.key === '/' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            var si = document.getElementById('search-input');
+            if (si) { si.focus(); si.select(); }
+        }
+
+        // "?" to show shortcuts help (future: could show a modal)
+    });
 
     // Make external links open in new tabs and add visual indicator
     function initExternalLinks() {

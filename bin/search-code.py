@@ -23,7 +23,7 @@ import urllib.request
 from typing import Any
 
 # Configuration
-USER_AGENT = "LLM-Wiki/1.0 (mailto:wiki@llm-wiki.dev)"
+USER_AGENT = "LLM-Wiki/1.0 (https://github.com/Oshayr/llm-wiki)"
 GITHUB_HEADERS = {
     "User-Agent": USER_AGENT,
     "Accept": "application/vnd.github.v3+json",

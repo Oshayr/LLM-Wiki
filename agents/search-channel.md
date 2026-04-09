@@ -1,6 +1,6 @@
 ---
 name: search-channel
-description: "Parameterized search channel — web, academic, code, or docs. Returns normalized result arrays."
+description: "Parameterized search channel — web, academic, code, docs, or wikipedia. Returns normalized result arrays."
 model: haiku
 ---
 
@@ -36,11 +36,22 @@ Execute search queries for a specific channel type. The caller specifies the cha
 4. Cache results: `python3 bin/cache.py store docs "<query>" "<results_json>"`
 5. Return normalized results: {title, url, snippet, source_type: "docs", credibility_tier}
 
+### wikipedia
+1. Check search cache first: `python3 bin/cache.py check wikipedia "<query>"`
+2. Use `python3 bin/search-wikipedia.py search "<query>" --top 5`
+3. Optionally pass `--lang <code>` for non-English queries (e.g. `--lang de`)
+4. Save results to cache: `python3 bin/cache.py store wikipedia "<query>" "<results_json>"`
+5. Return normalized results: {title, url, snippet, source_type: "wikipedia", credibility_tier: 2, pageid, lang, extract}
+
+Use for: factual/encyclopedic topics — history, science, biographies, concepts, geography, technology overviews.
+Avoid for: very recent events (Wikipedia lags real-time), niche technical code questions.
+
 ## Cache TTLs
 - web: 7 days
 - academic: 30 days
 - code: 3 days
 - docs: 7 days
+- wikipedia: 30 days
 
 ## Rules
 - Always check cache before searching

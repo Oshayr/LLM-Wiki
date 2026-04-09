@@ -16,8 +16,8 @@ Layer 1 (response_cache): wiki-query answers. TTL 1 day.
 Layer 2 (search_cache): per-channel search results. TTL varies by channel.
 Layer 3 (merged_cache): search-merger ranked output. TTL 3 days.
 
-Channels: web, academic, code, docs
-TTLs: web=7d, academic=30d, code=3d, docs=7d
+Channels: web, academic, code, docs, wikipedia
+TTLs: web=7d, academic=30d, code=3d, docs=7d, wikipedia=30d
 Default cache-db: state/wiki/cache/search.db
 """
 
@@ -35,7 +35,33 @@ CHANNEL_TTLS = {
     "academic": 30,
     "code": 3,
     "docs": 7,
+    "wikipedia": 30,
 }
+
+# Topic-aware TTLs for cache entries (maps freshness tier to cache TTL in days)
+TOPIC_TTLS = {
+    "live": 0.01,       # ~15 min
+    "breaking": 0.25,   # ~6 hours
+    "current": 1,       # 1 day
+    "fast": 3,          # 3 days
+    "moderate": 7,      # 1 week
+    "standard": 7,      # 1 week (default)
+    "academic": 30,     # 1 month
+    "evergreen": 30,    # 1 month
+    "permanent": 30,    # 1 month
+}
+
+
+def get_topic_ttl(freshness_tier: str) -> int:
+    """Get cache TTL in days for a given freshness tier.
+
+    Args:
+        freshness_tier: One of live, breaking, current, fast, moderate, standard, academic, evergreen, permanent
+
+    Returns:
+        TTL in days for cache entries related to this topic type.
+    """
+    return TOPIC_TTLS.get(freshness_tier, TOPIC_TTLS["standard"])
 
 
 def parse_arguments():

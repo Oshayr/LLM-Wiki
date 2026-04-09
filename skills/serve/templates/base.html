@@ -3,28 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <title>{% block title %}LLM Wiki{% endblock %}</title>
-    <link rel="stylesheet" href="/static/style.css?v=10">
+    <link rel="stylesheet" href="/static/style.css?v=11">
 </head>
 <body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="sr-only" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:999;" onfocus="this.style.cssText='position:fixed;left:16px;top:16px;z-index:9999;padding:8px 16px;background:var(--wiki-accent);color:white;border-radius:4px;text-decoration:none;font-family:var(--wiki-font-ui);';" onblur="this.style.cssText='position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;';">Skip to content</a>
+
     <!-- Top Navigation Bar -->
-    <div class="wiki-topbar">
+    <header class="wiki-topbar" role="banner">
         <div class="wiki-topbar-content">
             <div class="wiki-logo">
-                <a href="/" class="wiki-name">LLM Wiki</a>
+                <a href="/" class="wiki-name" aria-label="LLM Wiki home">LLM Wiki</a>
             </div>
-            <form class="wiki-search-form" action="/search" method="GET">
+            <form class="wiki-search-form" action="/search" method="GET" role="search" aria-label="Search wiki">
                 <input
-                    type="text"
+                    type="search"
                     name="q"
                     class="wiki-search-input"
-                    placeholder="Search pages..."
+                    placeholder="Search pages... (press /)"
                     autocomplete="off"
                     id="search-input"
+                    aria-label="Search pages"
                 >
-                <button type="submit" class="wiki-search-btn">Search</button>
+                <button type="submit" class="wiki-search-btn" aria-label="Submit search">Search</button>
             </form>
-            <nav class="wiki-nav">
+            <button class="wiki-nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="main-nav">&#9776;</button>
+            <nav class="wiki-nav" id="main-nav" role="navigation" aria-label="Main navigation">
                 <a href="/" class="wiki-nav-link">Home</a>
                 <a href="/create" class="wiki-nav-link">+ New</a>
                 <a href="/daily" class="wiki-nav-link">Daily</a>
@@ -36,18 +42,18 @@
                 <a href="/random" class="wiki-nav-link">Random</a>
                 <a href="/recent" class="wiki-nav-link">Recent</a>
                 <a href="/stats" class="wiki-nav-link">Stats</a>
-                <button id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+                <button id="theme-toggle" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle color theme">&#127769;</button>
             </nav>
         </div>
-    </div>
+    </header>
 
     <!-- Main Container -->
     <div class="wiki-container">
         <!-- Main Content Area -->
-        <div class="wiki-main">
+        <main class="wiki-main" id="main-content" role="main">
             {% block content %}
             {% endblock %}
-        </div>
+        </main>
 
         {% block sidebar_extra %}
         {% endblock %}
@@ -88,21 +94,42 @@
     </div>
 
     <!-- Footer -->
-    <footer class="wiki-footer">
+    <footer class="wiki-footer" role="contentinfo">
         <div class="wiki-footer-content">
             <p>
                 <small>
                     LLM Wiki &middot;
                     <a href="/wiki/about">About</a> &middot;
-                    <a href="/wiki/help">Help</a>
+                    <a href="/wiki/help">Help</a> &middot;
+                    <kbd>/</kbd> to search
                 </small>
             </p>
         </div>
     </footer>
 
-    <!-- Scripts (cache-bust with ?v=10 after edits) -->
-    <script src="/static/wiki.js?v=10"></script>
-    <script src="/static/chat.js?v=10"></script>
+    <!-- Scripts (cache-bust with ?v=11 after edits) -->
+    <script src="/static/wiki.js?v=11"></script>
+    <script src="/static/chat.js?v=11"></script>
+    <script>
+    // Mobile hamburger menu toggle
+    (function() {
+        var toggle = document.getElementById('nav-toggle');
+        var nav = document.getElementById('main-nav');
+        if (toggle && nav) {
+            toggle.addEventListener('click', function() {
+                var isOpen = nav.classList.toggle('open');
+                toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+            // Close nav when a link is clicked (mobile)
+            nav.querySelectorAll('.wiki-nav-link').forEach(function(link) {
+                link.addEventListener('click', function() {
+                    nav.classList.remove('open');
+                    toggle.setAttribute('aria-expanded', 'false');
+                });
+            });
+        }
+    })();
+    </script>
     <script>
     // Combined panel: tabs + minimize
     (function() {
@@ -150,10 +177,14 @@
         var current = html.getAttribute('data-theme') || 'light';
         var idx = themeOrder.indexOf(current);
         var next = themeOrder[(idx + 1) % themeOrder.length];
+        // Enable smooth transition for theme switch
+        document.body.classList.add('theme-transitioning');
         html.setAttribute('data-theme', next);
         localStorage.setItem('wiki-theme', next);
         var btn = document.getElementById('theme-toggle');
         if (btn) btn.textContent = themeIcons[next] || '\uD83C\uDF19';
+        // Remove transition class after animation completes
+        setTimeout(function() { document.body.classList.remove('theme-transitioning'); }, 350);
     }
     // Apply saved theme on load
     (function() {
