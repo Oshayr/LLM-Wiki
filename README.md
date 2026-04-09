@@ -134,7 +134,7 @@ Comprehensive wiki maintenance and quality control.
 **Maintenance steps:**
 1. **Lint** — fix broken `[[links]]`, missing frontmatter, orphan pages
 2. **Deduplicate** — merge pages with >60% slug token overlap
-3. **Confidence upgrade** — promote pages based on source count (low→medium→high)
+3. **Confidence upgrade** — promote pages based on source count (low->medium->high)
 4. **Stale detection** — flag pages past their freshness tier TTL
 5. **Fact-checking** — verify claims on high-confidence pages
 6. **Concept synthesis** — auto-generate articles connecting 3+ related pages
@@ -207,7 +207,7 @@ flowchart TD
 llm-wiki/
   .claude-plugin/       Plugin metadata (plugin.json, marketplace.json)
   agents/               10 autonomous agents
-  bin/                  24 CLI utilities (search, backlinks, gaps, cache, ...)
+  bin/                  23 CLI utilities (search, backlinks, gaps, cache, ...)
   mcp/                  MCP server for wiki operations
   rules/                Workflow and integration rules
   skills/               5 user-facing skills
@@ -222,8 +222,8 @@ llm-wiki/
 ## Data Model
 
 Wiki data lives in `.wiki/` — its location is derived from the plugin install scope:
-- **User-level install** (`~/.claude/plugins/llm-wiki`) → `~/.wiki/`
-- **Project-level install** (`.claude/plugins/llm-wiki`) → `.wiki/` at project root
+- **User-level install** (`~/.claude/plugins/llm-wiki`) -> `~/.wiki/`
+- **Project-level install** (`.claude/plugins/llm-wiki`) -> `.wiki/` at project root
 
 ```
 .wiki/

@@ -205,7 +205,7 @@ const AGENTS = [
 const CLI_UTILS = [
   {name:"backlinks.py",desc:"SQLite-backed backlink index — build, query, verify bidirectional consistency, detect broken links and orphans"},
   {name:"cache.py",desc:"2-layer search cache with channel-specific TTLs (web:7d, docs:7d), stale-while-revalidate, adaptive TTL"},
-  {name:"circuit_breaker.py",desc:"Circuit breaker for external APIs — closed→open→half-open states, 5-failure threshold, 300s cooldown"},
+  {name:"circuit_breaker.py",desc:"Circuit breaker for external APIs — closed->open->half-open states, 5-failure threshold, 300s cooldown"},
   {name:"citation_graph.py",desc:"Academic citation graph construction — snowball from seed papers, PageRank-style influence scoring, graph export"},
   {name:"claims.py",desc:"Claim extraction & verification tracking — quantitative, entity, comparative claim types with status lifecycle"},
   {name:"daily.py",desc:"Daily notes & journal — templated daily pages, weekly rollup summaries, date-range search"},
@@ -297,7 +297,7 @@ function ArchDiagram() {
         <text x={x+54} y="211" textAnchor="middle" fontSize="10" fill="#1e40af">{l}</text></React.Fragment>)}
       <line x1="410" y1="230" x2="410" y2="256" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arrow)"/>
       <rect x="20" y="256" width="380" height="80" rx="8" fill="#faf5ff" stroke="#d8b4fe" strokeWidth="1.5"/>
-      <text x="40" y="277" fontSize="10" fontWeight="600" fill="#6b21a8" letterSpacing=".06em">BIN/ UTILITIES \u2014 24 Scripts</text>
+      <text x="40" y="277" fontSize="10" fontWeight="600" fill="#6b21a8" letterSpacing=".06em">BIN/ UTILITIES \u2014 23 Scripts</text>
       <text x="40" y="296" fontSize="10" fill="#7e22ce">embed.py \u00b7 rag.py \u00b7 fetch.py \u00b7 query.py</text>
       <text x="40" y="311" fontSize="10" fill="#7e22ce">backlinks.py \u00b7 cache.py \u00b7 circuit_breaker.py</text>
       <text x="40" y="326" fontSize="10" fill="#7e22ce">wiki_logging.py \u00b7 exceptions.py \u00b7 search-*.py \u00b7 ...</text>
@@ -568,7 +568,7 @@ updated: "{{updated}}"
         <Expandable title="Agent Layer — 10 Agents">
           <p style={{fontSize:14,color:'var(--text-muted)'}}>Agents are Claude subprocesses defined as markdown prompts in <code>agents/</code>. They activate automatically based on context. The wiki-writer and wiki-reader handle CRUD operations. The backlink-manager maintains link consistency. The search-orchestrator fans out research to search-channel subagents. The research-loop runs iterative deep-dives. The fact-checker and citation-explorer handle quality assurance. The wiki-auditor performs health maintenance. The research-processor deduplicates and condenses parallel results.</p>
         </Expandable>
-        <Expandable title="Utilities Layer — 24 CLI Scripts">
+        <Expandable title="Utilities Layer — 23 CLI Scripts">
           <p style={{fontSize:14,color:'var(--text-muted)'}}>The <code>bin/</code> directory contains Python scripts that handle deterministic operations without requiring LLM calls. These cover search (full-text TF-IDF, academic APIs, code registries), data management (backlinks, cache, embeddings), quality (claims, provenance), utilities (daily notes, diffs, export, flashcards), and infrastructure (structured logging, custom exceptions, circuit breakers). Agents call these scripts as tools during execution.</p>
         </Expandable>
         <Expandable title="Server Layer — MCP + FastAPI">
@@ -762,7 +762,7 @@ LIST sources FROM "transformer-architecture"`}</CodeBlock>
       {/* AGENTS */}
       <section id="agents">
         <h1 className="section-title">Agents</h1>
-        <p className="section-subtitle">9 autonomous agents that activate automatically based on conversation context. Defined as markdown prompts in <code>agents/</code>.</p>
+        <p className="section-subtitle">10 autonomous agents that activate automatically based on conversation context. Defined as markdown prompts in <code>agents/</code>.</p>
         {AGENTS.map(a => <div key={a.name} className="card" style={{borderLeft:`4px solid ${a.color}`}}>
           <div className="card-header">
             <div className="card-icon" style={{background:a.color+'18',color:a.color,fontSize:14,fontWeight:700}}>{a.name.split('-').map(w=>w[0]).join('').toUpperCase()}</div>
@@ -884,7 +884,7 @@ LIST sources FROM "transformer-architecture"`}</CodeBlock>
         </tbody></table></div>
         <p style={{fontSize:14,color:'var(--text-muted)',marginTop:8}}>Custom exception hierarchy in <code>exceptions.py</code>: <code>WikiError</code> base class with specific types (<code>FetchError</code>, <code>CacheError</code>, <code>SearchError</code>, <code>PageNotFoundError</code>, <code>CircuitOpenError</code>, <code>RateLimitError</code>, etc.).</p>
         <h3 style={{marginTop:24,marginBottom:12}}>Circuit Breaker</h3>
-        <p style={{fontSize:14,color:'var(--text-muted)'}}>External API calls are protected by <code>circuit_breaker.py</code>: <strong>closed</strong> (normal) → <strong>open</strong> (after 5 failures, blocks calls for 300s) → <strong>half-open</strong> (test calls, 3 successes to recover). Prevents cascading failures when upstream APIs are down.</p>
+        <p style={{fontSize:14,color:'var(--text-muted)'}}>External API calls are protected by <code>circuit_breaker.py</code>: <strong>closed</strong> (normal) -&gt; <strong>open</strong> (after 5 failures, blocks calls for 300s) -&gt; <strong>half-open</strong> (test calls, 3 successes to recover). Prevents cascading failures when upstream APIs are down.</p>
       </section>
 
       {/* DEPENDENCIES */}
