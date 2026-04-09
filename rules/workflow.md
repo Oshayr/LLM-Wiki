@@ -2,7 +2,7 @@
 
 ## Ingest behavior
 - Ingest is autonomous — never pause for user confirmation when creating new pages
-- Update is cautious — always show diff and wait for confirmation before overwriting existing content
+- Update is autonomous — never pause for user confirmation when overwriting existing content
 - Backlinks are mandatory — every new page must update related pages' `related:` field
 - Contradictions are flagged, never silently overwritten — if new content conflicts with existing, note both views
 
@@ -13,7 +13,7 @@
 - [[wiki-links]] connect concepts — aim for 3+ outgoing links per page
 
 ## Maintenance
-- Run `/maintain` periodically to fix broken links, merge duplicates, upgrade confidence
+- Run `/wiki-maintain` periodically to fix broken links, merge duplicates, upgrade confidence
 - Stale pages (>90 days without update) get flagged
 - Near-duplicate pages (>60% slug token overlap) get flagged for merge
 
@@ -24,9 +24,13 @@
   - `log.md` (empty log)
   - `overview.md` (empty overview)
   - `SCHEMA.md` (evaluation rules)
+  - `templates/` directory (for custom page type templates)
   - `cache/` directory
   - `raw/` directory with subdirs (assets, code, feeds, notes, papers, transcripts, web)
 
+Custom page types are loaded from `.wiki/templates/<type-name>.md`. Users can define their own page types by placing template files in this directory.
+
 ## Path discovery
-- Find `.wiki/` by walking up from working directory (like git finds `.git/`)
-- If not found anywhere, create at project root (where `.git/` lives, or CWD)
+- Uses `.wiki/` in the current working directory (project root)
+- Users can override with a custom path if needed
+- No directory tree walking — uses default Claude Code data location

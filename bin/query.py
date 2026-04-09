@@ -24,6 +24,10 @@ import sqlite3
 import sys
 from pathlib import Path
 
+from wiki_logging import get_logger
+
+logger = get_logger(__name__)
+
 
 class FrontmatterQuery:
     """Query engine for wiki page frontmatter."""
@@ -432,6 +436,7 @@ def main():
 
     elif args.command == "index":
         stats = fq.index()
+        logger.info("Index rebuilt", extra={"pages": stats['pages'], "fields": stats['fields']})
         print(f"Indexed {stats['pages']} pages, {stats['fields']} fields")
 
     elif args.command == "fields":

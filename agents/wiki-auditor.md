@@ -4,7 +4,7 @@ description: "Wiki health audit — finds and fixes broken links, missing frontm
 model: haiku
 ---
 
-Audit and fix wiki structural issues. Find `.wiki/` by walking up from working directory.
+Audit and fix wiki structural issues. Uses `.wiki/` in the current working directory. Location can be overridden by the user.
 
 ## Process
 

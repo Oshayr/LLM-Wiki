@@ -18,6 +18,11 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+from wiki_logging import get_logger
+from exceptions import PageNotFoundError
+
+logger = get_logger(__name__)
+
 
 class BacklinkDB:
     """Manages wiki backlink index in SQLite."""
@@ -50,7 +55,7 @@ class BacklinkDB:
         # Migration: add to_section column if missing
         try:
             conn.execute("ALTER TABLE links ADD COLUMN to_section TEXT DEFAULT ''")
-        except Exception:
+        except sqlite3.OperationalError:
             pass
         conn.execute("""
             CREATE TABLE IF NOT EXISTS pages_meta (
@@ -140,20 +145,19 @@ class BacklinkDB:
                     (slug, now, link_count),
                 )
             except Exception as e:
-                print(f"Error processing {slug}: {e}", file=sys.stderr)
+                logger.error("Error processing page", extra={"slug": slug, "error": str(e)}, exc_info=True)
 
         conn.commit()
         conn.close()
 
-        print(f"Built backlink index: {len(md_files)} pages, {total_links} links")
+        logger.info("Built backlink index", extra={"pages": len(md_files), "links": total_links})
 
     def update(self, slug: str) -> None:
         """Update links for a single page (O(k) not O(n))."""
         md_files = self._get_md_files()
 
         if slug not in md_files:
-            print(f"Error: page '{slug}' not found", file=sys.stderr)
-            sys.exit(1)
+            raise PageNotFoundError(slug)
 
         file_path = md_files[slug]
         content = file_path.read_text(encoding="utf-8")
@@ -187,7 +191,7 @@ class BacklinkDB:
         conn.commit()
         conn.close()
 
-        print(f"Updated '{slug}': {len(new_links)} outgoing links")
+        logger.info("Updated page", extra={"slug": slug, "links": len(new_links)})
 
     def query(self, slug: str) -> None:
         """Get all pages that link to <slug>."""
@@ -291,7 +295,15 @@ class BacklinkDB:
 
         conn.close()
 
-        # Print stats
+        # Output stats
+        logger.info("Link statistics", extra={
+            "total_links": total_links,
+            "total_pages": total_pages,
+            "orphans": orphan_count,
+            "most_linked": most_linked,
+            "most_linking": most_linking,
+            "type_distribution": type_dist
+        })
         print(f"Total links: {total_links}")
         print(f"Total pages indexed: {total_pages}")
         print(f"Orphan pages: {orphan_count}")
@@ -378,20 +390,24 @@ def main():
 
     args = parser.parse_args()
 
-    db = BacklinkDB(args.pages_dir)
+    try:
+        db = BacklinkDB(args.pages_dir)
 
-    if args.command == "build":
-        db.build()
-    elif args.command == "update":
-        db.update(args.slug)
-    elif args.command == "query":
-        db.query(args.slug)
-    elif args.command == "verify":
-        db.verify(args.slug)
-    elif args.command == "stats":
-        db.stats()
-    elif args.command == "missing":
-        db.missing()
+        if args.command == "build":
+            db.build()
+        elif args.command == "update":
+            db.update(args.slug)
+        elif args.command == "query":
+            db.query(args.slug)
+        elif args.command == "verify":
+            db.verify(args.slug)
+        elif args.command == "stats":
+            db.stats()
+        elif args.command == "missing":
+            db.missing()
+    except PageNotFoundError as e:
+        logger.error("Page not found", extra={"slug": e.slug})
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -9,6 +9,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from wiki_logging import get_logger
+
+logger = get_logger(__name__)
+
 
 def parse_wiki_page(content: str) -> tuple[dict[str, str], dict[str, str]]:
     """
@@ -388,6 +392,7 @@ def main():
 
     # Validate files
     if not old_file or not new_file:
+        logger.error("Missing required file arguments")
         print("Error: both old_file and new_file are required")
         sys.exit(1)
 
@@ -395,10 +400,12 @@ def main():
     new_path = Path(new_file)
 
     if not old_path.exists():
+        logger.error("File does not exist", extra={"path": old_file})
         print(f"Error: {old_file} does not exist")
         sys.exit(1)
 
     if not new_path.exists():
+        logger.error("File does not exist", extra={"path": new_file})
         print(f"Error: {new_file} does not exist")
         sys.exit(1)
 
@@ -407,6 +414,7 @@ def main():
         old_content = old_path.read_text()
         new_content = new_path.read_text()
     except Exception as e:
+        logger.error("Error reading files", extra={"error": str(e)}, exc_info=True)
         print(f"Error reading files: {e}")
         sys.exit(1)
 

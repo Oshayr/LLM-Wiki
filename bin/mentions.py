@@ -17,6 +17,10 @@ import sqlite3
 import sys
 from pathlib import Path
 
+from wiki_logging import get_logger
+
+logger = get_logger(__name__)
+
 
 class MentionsFinder:
     """Finds unlinked mentions of wiki page titles across all pages."""
@@ -254,7 +258,7 @@ def main():
     if args.command == "scan":
         mentions = finder.scan()
         print(json.dumps(mentions, indent=2))
-        print(f"\nFound {len(mentions)} unlinked mentions", file=sys.stderr)
+        logger.info("Scan complete", extra={"mentions_found": len(mentions)})
 
     elif args.command == "page":
         mentions = finder.get_mentions_for(args.slug)
@@ -263,9 +267,10 @@ def main():
     elif args.command == "link":
         success = finder.link_mention(args.source_slug, args.target_slug, args.line_number)
         if success:
+            logger.info("Mention linked", extra={"source": args.source_slug, "target": args.target_slug, "line": args.line_number})
             print(f"Linked: {args.source_slug} → [[{args.target_slug}]] at line {args.line_number}")
         else:
-            print("Failed to link mention", file=sys.stderr)
+            logger.error("Failed to link mention", extra={"source": args.source_slug, "target": args.target_slug, "line": args.line_number})
             sys.exit(1)
 
 

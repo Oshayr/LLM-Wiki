@@ -9,8 +9,11 @@ Converts wiki markdown to HTML with special transformations for the wiki web UI:
 - Code blocks: Syntax highlighting support
 """
 
+import logging
 import re
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from markdown_it import MarkdownIt
 from mdit_py_plugins.footnote import footnote_plugin
@@ -333,6 +336,7 @@ class WikiRenderer:
                     f'<div class="dataview-meta">{len(data)} results</div></div>'
                 )
             except Exception as e:
+                logger.error(f"Dataview query error: {e}", exc_info=True)
                 return f'<pre class="dataview-error">Error: {str(e)[:200]}</pre>'
 
         import json

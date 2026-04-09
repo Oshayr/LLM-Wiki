@@ -8,7 +8,7 @@ Answer questions from the wiki only. Navigate via index first, read relevant pag
 
 ## Setup
 
-Find `.wiki/` by walking up from working directory. If not found, say "No wiki found."
+Uses `.wiki/` in the current working directory. Location can be overridden by the user. If not found, say "No wiki found."
 
 ## Depth Modes
 
@@ -18,17 +18,12 @@ Find `.wiki/` by walking up from working directory. If not found, say "No wiki f
 
 ## Process
 
-### 1. Read index.md + Check Page Count
+### 1. Read index.md
 
-Read `.wiki/index.md`.
-
-Count `.md` files in `.wiki/pages/`:
+Read `.wiki/index.md`. Identify 2-4 relevant pages using full-text TF-IDF search for ranked results:
 ```bash
-find .wiki/pages/ -maxdepth 1 -name "*.md" | wc -l
+python3 bin/search-fulltext.py .wiki/pages "<question>" --top 5
 ```
-
-- **≤200 pages**: identify 2-4 slugs from index.md by text match
-- **>200 pages**: use `python3 bin/search-fulltext.py .wiki/pages "<question>" --top 5`
 
 ### 2. Quick Depth
 If depth is `quick`: return the matching page titles and one-line descriptions from index.md. Done.

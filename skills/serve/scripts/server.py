@@ -144,8 +144,8 @@ def _find_similar_page(slug: str, store) -> str | None:
                     for r in results:
                         if r["slug"] == answer or answer in r["slug"]:
                             return r["slug"]
-        except Exception:
-            pass  # Timeout or error — skip agent check, proceed to research
+        except Exception as e:
+            logger.debug(f"Agent similarity check error: {e}")  # Timeout or error — skip agent check, proceed to research
 
     return None
 
@@ -307,7 +307,8 @@ def create_app() -> FastAPI:
         """Queue a research task."""
         try:
             data = await request.json()
-        except Exception:
+        except Exception as e:
+            logger.error(f"Invalid JSON in /api/research/queue: {e}", exc_info=True)
             return JSONResponse(
                 {"error": "Invalid or empty JSON body"}, status_code=400
             )
@@ -619,8 +620,8 @@ def create_app() -> FastAPI:
                     history.append(
                         {"hash": parts[0][:8], "date": parts[1], "message": parts[2]}
                     )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Error parsing git history: {e}")
 
         return templates.TemplateResponse(
             request,
@@ -668,6 +669,7 @@ def create_app() -> FastAPI:
                 )
             return JSONResponse({"diff": diff_text, "commit": commit_hash})
         except Exception as e:
+            logger.error(f"Error getting wiki diff: {e}", exc_info=True)
             return JSONResponse({"error": str(e)}, status_code=500)
 
     # GET /wiki/{slug}/edit - Edit page
@@ -698,7 +700,8 @@ def create_app() -> FastAPI:
             return JSONResponse({"error": "invalid slug"}, status_code=400)
         try:
             data = await request.json()
-        except Exception:
+        except Exception as e:
+            logger.error(f"Invalid JSON in /api/wiki/{slug}/save: {e}", exc_info=True)
             return JSONResponse({"error": "Invalid JSON"}, status_code=400)
 
         content_md = data.get("content", "")
@@ -733,7 +736,8 @@ def create_app() -> FastAPI:
         """Create a new wiki page from form data."""
         try:
             data = await request.json()
-        except Exception:
+        except Exception as e:
+            logger.error(f"Invalid JSON in /api/wiki/create: {e}", exc_info=True)
             return JSONResponse({"error": "Invalid JSON"}, status_code=400)
 
         slug = data.get("slug", "").strip()
@@ -824,7 +828,8 @@ def create_app() -> FastAPI:
                 )
                 if printable / max(len(text[:1000]), 1) < 0.5:
                     text = f"*Imported from PDF: {filename}*\n\nBinary PDF content — use a PDF viewer for full content."
-            except Exception:
+            except Exception as e:
+                logger.error(f"Error extracting text from PDF {filename}: {e}", exc_info=True)
                 text = f"*Imported from PDF: {filename}*\n\nCould not extract text."
 
             today = datetime.now().strftime("%Y-%m-%d")
@@ -931,7 +936,8 @@ def create_app() -> FastAPI:
         try:
             data = json.loads(result.stdout)
             slug = data.get("slug", f"daily-{datetime.now().strftime('%Y-%m-%d')}")
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error parsing daily note JSON: {e}", exc_info=True)
             slug = f"daily-{datetime.now().strftime('%Y-%m-%d')}"
 
         # Refresh in case it was just created
@@ -953,7 +959,8 @@ def create_app() -> FastAPI:
         )
         try:
             cards = json.loads(result.stdout)
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error parsing flashcards JSON: {e}", exc_info=True)
             cards = []
 
         # Get stats
@@ -963,7 +970,8 @@ def create_app() -> FastAPI:
         )
         try:
             stats = json.loads(result.stdout)
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error parsing flashcard stats JSON: {e}", exc_info=True)
             stats = {}
 
         return templates.TemplateResponse(
@@ -983,7 +991,8 @@ def create_app() -> FastAPI:
         try:
             cards = json.loads(result.stdout)
             return JSONResponse(cards[0] if cards else {"done": True})
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error parsing flashcard JSON: {e}", exc_info=True)
             return JSONResponse({"done": True})
 
     # POST /api/review/grade — Grade a flashcard
@@ -1002,7 +1011,8 @@ def create_app() -> FastAPI:
         )
         try:
             return JSONResponse(json.loads(result.stdout))
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error grading flashcard: {e}", exc_info=True)
             return JSONResponse({"error": result.stderr[:200]}, status_code=500)
 
     # GET /api/wiki/{slug}/backlinks — Enhanced backlinks with unlinked mentions
@@ -1018,7 +1028,8 @@ def create_app() -> FastAPI:
         )
         try:
             mentions = json.loads(result.stdout)
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error parsing mentions JSON: {e}", exc_info=True)
             mentions = []
         return JSONResponse({"backlinks": backlinks, "mentions": mentions})
 
@@ -1040,19 +1051,20 @@ def create_app() -> FastAPI:
         wiki_store.refresh_page(source_slug)
         return JSONResponse({"status": "linked" if result.returncode == 0 else "failed"})
 
-    # GET /api/wiki/{slug}/suggested-links — Relationship discovery
+    # GET /api/wiki/{slug}/suggested-links — Suggested links via backlinks analysis
     @app.get("/api/wiki/{slug}/suggested-links")
     async def api_suggested_links(slug: str):
         import subprocess
         bin_dir = Path(__file__).parent.parent.parent.parent / "bin"
         result = subprocess.run(
-            [sys.executable, str(bin_dir / "discover.py"), "related",
-             str(wiki_store.pages_dir), slug, "--top", "5"],
+            [sys.executable, str(bin_dir / "backlinks.py"), "query",
+             str(wiki_store.pages_dir), slug],
             capture_output=True, text=True, timeout=30,
         )
         try:
             return JSONResponse(json.loads(result.stdout))
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error parsing backlinks JSON: {e}", exc_info=True)
             return JSONResponse([])
 
     # GET /api/wiki/{slug}/provenance — Provenance chain
@@ -1067,7 +1079,8 @@ def create_app() -> FastAPI:
         )
         try:
             return JSONResponse(json.loads(result.stdout))
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error parsing provenance JSON: {e}", exc_info=True)
             return JSONResponse([])
 
     # GET /gaps — Gap analysis dashboard
@@ -1081,7 +1094,8 @@ def create_app() -> FastAPI:
         )
         try:
             gaps = json.loads(result.stdout)
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error parsing gaps analysis JSON: {e}", exc_info=True)
             gaps = {"summary": {}, "structural_gaps": [], "depth_gaps": [], "freshness_gaps": [], "missing_pages": []}
 
         return templates.TemplateResponse(
@@ -1104,7 +1118,8 @@ def create_app() -> FastAPI:
         )
         try:
             return JSONResponse(json.loads(result.stdout))
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error parsing query results JSON: {e}", exc_info=True)
             return JSONResponse({"error": result.stderr[:200]}, status_code=500)
 
     # POST /api/wiki/{slug}/undo — Undo last commit for a page
@@ -1119,7 +1134,8 @@ def create_app() -> FastAPI:
         wiki_store.refresh_page(slug)
         try:
             return JSONResponse(json.loads(result.stdout))
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error undoing page {slug}: {e}", exc_info=True)
             return JSONResponse({"error": result.stderr[:200]}, status_code=500)
 
     # GET /canvas — Canvas/whiteboard view
@@ -1154,8 +1170,8 @@ def create_app() -> FastAPI:
         if canvas_path.exists():
             try:
                 canvas_data = json.loads(canvas_path.read_text(encoding="utf-8"))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"Error loading canvas data: {e}", exc_info=True)
 
         return templates.TemplateResponse(
             request, "canvas.html",
@@ -1233,6 +1249,7 @@ def create_app() -> FastAPI:
             response = await chat_manager.send_message(message)
             return JSONResponse({"response": response})
         except Exception as e:
+            logger.error(f"Error sending chat message: {e}", exc_info=True)
             return JSONResponse({"error": str(e)}, status_code=500)
 
     # GET /api/chat/history - Chat history
@@ -1319,8 +1336,10 @@ def create_app() -> FastAPI:
             return JSONResponse({"result": result, "tokens_est": tokens_est})
 
         except TimeoutError:
+            logger.error("AI request timed out", exc_info=True)
             return JSONResponse({"error": "AI request timed out"}, status_code=504)
         except Exception as e:
+            logger.error(f"Error in AI chat endpoint: {e}", exc_info=True)
             return JSONResponse({"error": str(e)}, status_code=500)
 
     # GET /api/export/{format} - Export entire wiki
@@ -1516,7 +1535,8 @@ def main():
                 return f"{diff.days // 7}w ago"
             else:
                 return dt.strftime("%b %d, %Y")
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Error humanizing datetime: {e}")
             return str(value)[:10] if value else ""
 
     templates.env.filters["humanize"] = humanize_datetime
@@ -1526,7 +1546,7 @@ def main():
         WikiStore.smoke_test()
         logger.info("Smoke test passed")
     except Exception as e:
-        logger.error(f"Smoke test failed: {e}")
+        logger.error(f"Smoke test failed: {e}", exc_info=True)
         sys.exit(1)
 
     # Create and configure app

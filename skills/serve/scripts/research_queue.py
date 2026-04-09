@@ -6,10 +6,13 @@ for dynamically generated wiki pages.
 """
 
 import json
+import logging
 import sqlite3
 import threading
 from datetime import datetime
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 1  # Failed tasks get re-enqueued once at low priority
 
@@ -68,8 +71,8 @@ class ResearchQueue:
                 try:
                     cursor.execute(col_sql)
                     conn.commit()
-                except Exception:
-                    pass  # Column already exists
+                except Exception as e:
+                    logger.debug(f"Column migration: {e}")  # Column already exists
 
             # Create index for efficient lookups by slug and status
             cursor.execute("""

@@ -143,7 +143,7 @@ class ResearchWorkerPool:
                         proc.wait()
                 except Exception as e:
                     logger.error(
-                        f"Error terminating subprocess for task {task_id}: {e}"
+                        f"Error terminating subprocess for task {task_id}: {e}", exc_info=True
                     )
 
             self._active_subprocesses.clear()
@@ -185,7 +185,7 @@ class ResearchWorkerPool:
                 proc.kill()
                 proc.wait(timeout=5)
             except Exception as e:
-                logger.error(f"Error killing subprocess for task {task_id}: {e}")
+                logger.error(f"Error killing subprocess for task {task_id}: {e}", exc_info=True)
 
             self._active_subprocesses.pop(task_id, None)
             return True
@@ -545,8 +545,8 @@ IMPORTANT: Be efficient. Search → read key results → write the page. Do not 
                                         )
                                         try:
                                             self.queue.update_progress(task_id, stage)
-                                        except Exception:
-                                            pass
+                                        except Exception as e:
+                                            logger.debug(f"Error updating progress for task {task_id}: {e}")
 
                         # Detect completion
                         elif evt_type == "result":
@@ -554,8 +554,8 @@ IMPORTANT: Be efficient. Search → read key results → write the page. Do not 
                             if cost:
                                 logger.info(f"Task {task_id}: cost ${cost:.4f}")
 
-                except Exception:
-                    pass  # Process may have been killed
+                except Exception as e:
+                    logger.debug(f"Error reading subprocess output: {e}")  # Process may have been killed
 
             reader_thread = threading.Thread(
                 target=reader, name=f"OutputReader-{task_id}", daemon=True
@@ -658,7 +658,7 @@ IMPORTANT: Be efficient. Search → read key results → write the page. Do not 
                         self.queue.update_progress(task_id, stage)
 
             except Exception as e:
-                logger.debug(f"Task {task_id}: error reading subprocess output: {e}")
+                logger.debug(f"Task {task_id}: error reading subprocess output: {e}", exc_info=True)
                 time.sleep(0.5)
 
 

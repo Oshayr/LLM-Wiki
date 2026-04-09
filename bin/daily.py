@@ -17,6 +17,10 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from wiki_logging import get_logger
+
+logger = get_logger(__name__)
+
 
 DAILY_TEMPLATE = """---
 title: "Daily Note — {date_display}"
@@ -148,12 +152,14 @@ def search_daily(pages_dir: Path, start_date: str, end_date: str = None) -> list
     try:
         start = datetime.strptime(start_date, "%Y-%m-%d")
     except ValueError:
+        logger.warning("Invalid date format", extra={"date": start_date})
         return [{"error": f"Invalid date format: {start_date}. Use YYYY-MM-DD."}]
 
     if end_date:
         try:
             end = datetime.strptime(end_date, "%Y-%m-%d")
         except ValueError:
+            logger.warning("Invalid date format", extra={"date": end_date})
             return [{"error": f"Invalid date format: {end_date}. Use YYYY-MM-DD."}]
     else:
         end = datetime.now()

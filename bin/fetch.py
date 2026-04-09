@@ -23,6 +23,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
+from wiki_logging import get_logger
+from exceptions import FetchError
+
+logger = get_logger(__name__)
+
 
 def parse_arguments():
     """Parse command-line arguments."""
@@ -54,7 +59,8 @@ def validate_url(url):
         if not result.scheme or not result.netloc:
             return None
         return url
-    except Exception:
+    except Exception as e:
+        logger.debug("URL validation failed", extra={"url": url, "error": str(e)})
         return None
 
 
@@ -88,8 +94,11 @@ def load_from_cache(cache_dir, url):
             return None
 
         with open(cache_path, encoding="utf-8") as f:
-            return f.read(), "cache"
-    except Exception:
+            content = f.read()
+            logger.debug("Cache hit", extra={"cache_path": str(cache_path), "age_seconds": age_seconds})
+            return content, "cache"
+    except (OSError, IOError) as e:
+        logger.warning("Cache read failed", extra={"cache_path": str(cache_path), "error": str(e)})
         return None
 
 
@@ -103,8 +112,9 @@ def save_to_cache(cache_dir, url, content):
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         with open(cache_path, "w", encoding="utf-8") as f:
             f.write(content)
-    except Exception:
-        pass
+        logger.debug("Cache write", extra={"cache_path": str(cache_path), "size_bytes": len(content)})
+    except (OSError, IOError) as e:
+        logger.warning("Cache write failed", extra={"cache_dir": cache_dir, "error": str(e)})
 
 
 def fetch_with_jina(url, timeout):
@@ -114,8 +124,10 @@ def fetch_with_jina(url, timeout):
         req = urllib.request.Request(jina_url, headers={"Accept": "text/markdown"})
         with urllib.request.urlopen(req, timeout=timeout) as response:
             content = response.read().decode("utf-8")
+            logger.debug("Jina fetch succeeded", extra={"url": url, "size_bytes": len(content)})
             return content, "jina"
-    except Exception:
+    except (urllib.error.URLError, urllib.error.HTTPError, UnicodeDecodeError, Exception) as e:
+        logger.debug("Jina fetch failed", extra={"url": url, "error": str(e)})
         return None, None
 
 
@@ -126,16 +138,21 @@ def fetch_with_trafilatura(url, timeout):
 
         downloaded = trafilatura.fetch_url(url, timeout=timeout)
         if not downloaded:
+            logger.debug("Trafilatura fetch returned empty", extra={"url": url})
             return None, None
 
         markdown_content = trafilatura.extract(downloaded, output_format="markdown")
         if not markdown_content:
+            logger.debug("Trafilatura extraction returned empty", extra={"url": url})
             return None, None
 
+        logger.debug("Trafilatura fetch succeeded", extra={"url": url, "size_bytes": len(markdown_content)})
         return markdown_content, "trafilatura"
     except ImportError:
+        logger.debug("Trafilatura not installed")
         return None, None
-    except Exception:
+    except Exception as e:
+        logger.debug("Trafilatura fetch failed", extra={"url": url, "error": str(e)})
         return None, None
 
 
@@ -151,8 +168,10 @@ def fetch_raw_and_convert(url, timeout):
         with urllib.request.urlopen(req, timeout=timeout) as response:
             content = response.read().decode("utf-8", errors="replace")
             markdown = html_to_markdown(content)
+            logger.debug("Raw HTML fetch and conversion succeeded", extra={"url": url, "size_bytes": len(markdown)})
             return markdown, "raw"
-    except Exception:
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, Exception) as e:
+        logger.debug("Raw fetch failed", extra={"url": url, "error": str(e)})
         return None, None
 
 
@@ -248,26 +267,31 @@ def fetch_url(url, timeout, cache_dir):
         cached = load_from_cache(cache_dir, url)
         if cached:
             content, method = cached
+            logger.info("Fetch succeeded (cache)", extra={"url": url, "method": method, "size_bytes": len(content)})
             return content, method
 
     # Try Jina Reader first
     content, method = fetch_with_jina(url, timeout)
     if content:
         save_to_cache(cache_dir, url, content)
+        logger.info("Fetch succeeded (jina)", extra={"url": url, "method": method, "size_bytes": len(content)})
         return content, method
 
     # Try Trafilatura
     content, method = fetch_with_trafilatura(url, timeout)
     if content:
         save_to_cache(cache_dir, url, content)
+        logger.info("Fetch succeeded (trafilatura)", extra={"url": url, "method": method, "size_bytes": len(content)})
         return content, method
 
     # Fall back to raw HTTP
     content, method = fetch_raw_and_convert(url, timeout)
     if content:
         save_to_cache(cache_dir, url, content)
+        logger.info("Fetch succeeded (raw)", extra={"url": url, "method": method, "size_bytes": len(content)})
         return content, method
 
+    logger.error("All extraction methods failed", extra={"url": url})
     return None, None
 
 
@@ -278,13 +302,13 @@ def main():
     # Validate URL
     url = validate_url(args.url)
     if not url:
-        print("Error: Invalid URL format", file=sys.stderr)
+        logger.error("Invalid URL format", extra={"url": args.url})
         sys.exit(2)
 
     # Fetch content
     content, method = fetch_url(url, args.timeout, args.cache_dir)
     if not content or not method:
-        print("Error: All extraction methods failed", file=sys.stderr)
+        logger.error("All extraction methods failed", extra={"url": url})
         sys.exit(1)
 
     # Add metadata header
@@ -296,8 +320,9 @@ def main():
             Path(args.output).parent.mkdir(parents=True, exist_ok=True)
             with open(args.output, "w", encoding="utf-8") as f:
                 f.write(output)
-        except Exception as e:
-            print(f"Error writing to {args.output}: {e}", file=sys.stderr)
+            logger.info("Output written to file", extra={"output_path": args.output})
+        except (OSError, IOError) as e:
+            logger.error("Write failed", extra={"output_path": args.output, "error": str(e)})
             sys.exit(1)
     else:
         print(output, end="")

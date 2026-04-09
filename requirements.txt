@@ -13,9 +13,3 @@ websockets>=12.0
 
 # MCP server (required for wiki MCP tools)
 mcp>=1.0
-
-# Semantic search (optional — enables hybrid vector+keyword search)
-# onnxruntime>=1.17
-# tokenizers>=0.15
-# numpy>=1.24
-# sqlite-vec>=0.1

@@ -4,15 +4,12 @@
 Usage:
     python3 wiki-cache.py check <channel> <query> [--cache-db <path>]
     python3 wiki-cache.py store <channel> <query> <results_json> [--cache-db <path>]
-    python3 wiki-cache.py write-response <query> <response> [--source-pages <json>] [--cache-db <path>]
-    python3 wiki-cache.py read-response <query> [--cache-db <path>]
     python3 wiki-cache.py write-merged <queries_json> <results_json> [--cache-db <path>]
     python3 wiki-cache.py read-merged <queries_json> [--cache-db <path>]
     python3 wiki-cache.py stats [--cache-db <path>]
     python3 wiki-cache.py clear [<channel>] [--cache-db <path>]
     python3 wiki-cache.py purge-stale [--cache-db <path>]
 
-Layer 1 (response_cache): wiki-query answers. TTL 1 day.
 Layer 2 (search_cache): per-channel search results. TTL varies by channel.
 Layer 3 (merged_cache): search-merger ranked output. TTL 3 days.
 
@@ -28,6 +25,11 @@ import sqlite3
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
+from wiki_logging import get_logger
+from exceptions import CacheError, CacheMissError
+
+logger = get_logger(__name__)
 
 # Channel TTLs in days
 CHANNEL_TTLS = {
@@ -48,8 +50,6 @@ def parse_arguments():
         choices=[
             "check",
             "store",
-            "write-response",
-            "read-response",
             "write-merged",
             "read-merged",
             "stats",
@@ -57,11 +57,6 @@ def parse_arguments():
             "purge-stale",
         ],
         help="Cache command",
-    )
-    parser.add_argument(
-        "--source-pages",
-        help="JSON array of source page slugs (for write-response)",
-        default="[]",
     )
     parser.add_argument(
         "channel", nargs="?", help="Channel (web, academic, code, docs)"
@@ -117,9 +112,10 @@ def get_db_connection(db_path):
     """Get SQLite connection."""
     try:
         conn = sqlite3.connect(db_path, check_same_thread=False)
+        logger.debug("Database connection established", extra={"db_path": db_path})
         return conn
-    except Exception as e:
-        print(f"Error connecting to database: {e}", file=sys.stderr)
+    except (sqlite3.Error, OSError) as e:
+        logger.error("Database connection failed", extra={"db_path": db_path, "error": str(e)})
         sys.exit(1)
 
 
@@ -138,16 +134,6 @@ def init_database(conn):
                 expires_at TEXT NOT NULL,
                 hit_count INTEGER DEFAULT 0,
                 UNIQUE(channel, query_hash)
-            )
-            """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS response_cache (
-                query_hash TEXT PRIMARY KEY,
-                query_text TEXT NOT NULL,
-                response TEXT NOT NULL,
-                source_pages TEXT DEFAULT '[]',
-                created_at TEXT NOT NULL,
-                ttl_days INTEGER DEFAULT 1
             )
             """)
         cursor.execute("""
@@ -171,8 +157,9 @@ def init_database(conn):
             )
             """)
         conn.commit()
-    except Exception as e:
-        print(f"Error initializing database: {e}", file=sys.stderr)
+        logger.debug("Database schema initialized")
+    except sqlite3.Error as e:
+        logger.error("Database initialization failed", extra={"error": str(e)})
         sys.exit(1)
 
 
@@ -199,6 +186,7 @@ def command_check(conn, channel, query):
         row = cursor.fetchone()
 
         if not row:
+            logger.debug("Cache miss", extra={"channel": channel, "query_hash": query_hash})
             sys.exit(1)
 
         results_json, expires_at, hit_count = row
@@ -231,10 +219,12 @@ def command_check(conn, channel, query):
                 except sqlite3.OperationalError:
                     pass  # revalidation_queue table may not exist yet
                 conn.commit()
+                logger.info("Cache stale-while-revalidate hit", extra={"channel": channel, "query_hash": query_hash})
                 print(results_json, end="")
                 sys.exit(0)
 
             # Fully expired
+            logger.debug("Cache expired", extra={"channel": channel, "query_hash": query_hash})
             sys.exit(1)
 
         # Hit found and not expired
@@ -244,10 +234,11 @@ def command_check(conn, channel, query):
         )
         conn.commit()
 
+        logger.info("Cache hit", extra={"channel": channel, "query_hash": query_hash, "hit_count": hit_count + 1})
         print(results_json, end="")
         sys.exit(0)
     except sqlite3.Error as e:
-        print(f"Error checking cache: {e}", file=sys.stderr)
+        logger.error("Cache check failed", extra={"channel": channel, "query_hash": query_hash, "error": str(e)})
         sys.exit(1)
 
 
@@ -260,7 +251,7 @@ def command_store(conn, channel, query, results_json):
     try:
         json.loads(results_json)
     except json.JSONDecodeError:
-        print("Error: Invalid JSON in results", file=sys.stderr)
+        logger.error("Invalid JSON in results", extra={"channel": channel, "query": query})
         sys.exit(1)
 
     # Compute TTL
@@ -290,10 +281,10 @@ def command_store(conn, channel, query, results_json):
             ),
         )
         conn.commit()
-        print(f"Cached: {channel}/{query_hash}", file=sys.stderr)
+        logger.info("Cache stored", extra={"channel": channel, "query_hash": query_hash, "ttl_days": ttl_days})
         sys.exit(0)
     except sqlite3.Error as e:
-        print(f"Error storing cache: {e}", file=sys.stderr)
+        logger.error("Cache store failed", extra={"channel": channel, "query_hash": query_hash, "error": str(e)})
         sys.exit(1)
 
 
@@ -324,19 +315,15 @@ def command_stats(conn):
         else:
             print("  (empty)")
 
-        # Layer 1: response_cache
-        cursor.execute("SELECT COUNT(*) FROM response_cache")
-        resp_count = cursor.fetchone()[0]
-        print(f"\n=== Response Cache (Layer 1) === {resp_count} entries")
-
         # Layer 3: merged_cache
         cursor.execute("SELECT COUNT(*) FROM merged_cache")
         merged_count = cursor.fetchone()[0]
         print(f"\n=== Merged Cache (Layer 3) === {merged_count} entries")
 
+        logger.debug("Cache stats retrieved", extra={"search_entries": sum(r[1] for r in rows) if rows else 0, "merged_entries": merged_count})
         sys.exit(0)
     except sqlite3.Error as e:
-        print(f"Error getting stats: {e}", file=sys.stderr)
+        logger.error("Cache stats retrieval failed", extra={"error": str(e)})
         sys.exit(1)
 
 
@@ -352,70 +339,10 @@ def command_clear(conn, channel=None):
             cursor.execute("DELETE FROM search_cache")
 
         conn.commit()
-        print(f"Deleted {cursor.rowcount} entries", file=sys.stderr)
+        logger.info("Cache cleared", extra={"channel": channel, "rows_deleted": cursor.rowcount})
         sys.exit(0)
     except sqlite3.Error as e:
-        print(f"Error clearing cache: {e}", file=sys.stderr)
-        sys.exit(1)
-
-
-def command_write_response(conn, query, response, source_pages="[]"):
-    """Cache a wiki-query response."""
-    query_hash = compute_query_hash(query)
-    now = datetime.now(UTC)
-    try:
-        json.loads(source_pages)
-    except json.JSONDecodeError:
-        source_pages = "[]"
-
-    try:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            INSERT INTO response_cache (query_hash, query_text, response, source_pages, created_at, ttl_days)
-            VALUES (?, ?, ?, ?, ?, 1)
-            ON CONFLICT(query_hash) DO UPDATE SET
-                response = excluded.response,
-                source_pages = excluded.source_pages,
-                created_at = excluded.created_at
-            """,
-            (query_hash, query, response, source_pages, now.isoformat() + "Z"),
-        )
-        conn.commit()
-        print(f"Cached response: {query_hash}", file=sys.stderr)
-        sys.exit(0)
-    except sqlite3.Error as e:
-        print(f"Error writing response cache: {e}", file=sys.stderr)
-        sys.exit(1)
-
-
-def command_read_response(conn, query):
-    """Read a cached wiki-query response. Exit 0 if hit, 1 if miss/expired."""
-    query_hash = compute_query_hash(query)
-    try:
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT response, source_pages, created_at, ttl_days FROM response_cache WHERE query_hash = ?",
-            (query_hash,),
-        )
-        row = cursor.fetchone()
-        if not row:
-            sys.exit(1)
-
-        response, source_pages, created_at, ttl_days = row
-        created_dt = parse_iso_datetime(created_at)
-        if datetime.now(UTC) > created_dt + timedelta(days=ttl_days):
-            sys.exit(1)
-
-        result = {
-            "response": response,
-            "source_pages": json.loads(source_pages),
-            "cached_at": created_at,
-        }
-        print(json.dumps(result), end="")
-        sys.exit(0)
-    except sqlite3.Error as e:
-        print(f"Error reading response cache: {e}", file=sys.stderr)
+        logger.error("Cache clear failed", extra={"channel": channel, "error": str(e)})
         sys.exit(1)
 
 
@@ -424,12 +351,12 @@ def command_write_merged(conn, queries_json, results_json):
     try:
         queries = json.loads(queries_json)
     except json.JSONDecodeError:
-        print("Error: Invalid JSON in queries", file=sys.stderr)
+        logger.error("Invalid JSON in queries")
         sys.exit(1)
     try:
         json.loads(results_json)
     except json.JSONDecodeError:
-        print("Error: Invalid JSON in results", file=sys.stderr)
+        logger.error("Invalid JSON in results")
         sys.exit(1)
 
     # Hash the sorted query set for stable keys
@@ -450,10 +377,10 @@ def command_write_merged(conn, queries_json, results_json):
             (query_hash, queries_json, results_json, now.isoformat() + "Z"),
         )
         conn.commit()
-        print(f"Cached merged: {query_hash}", file=sys.stderr)
+        logger.info("Merged results cached", extra={"query_hash": query_hash, "num_queries": len(queries)})
         sys.exit(0)
     except sqlite3.Error as e:
-        print(f"Error writing merged cache: {e}", file=sys.stderr)
+        logger.error("Merged cache write failed", extra={"query_hash": query_hash, "error": str(e)})
         sys.exit(1)
 
 
@@ -462,7 +389,7 @@ def command_read_merged(conn, queries_json):
     try:
         queries = json.loads(queries_json)
     except json.JSONDecodeError:
-        print("Error: Invalid JSON in queries", file=sys.stderr)
+        logger.error("Invalid JSON in queries")
         sys.exit(1)
 
     normalized = json.dumps(sorted(q.lower().strip() for q in queries))
@@ -476,17 +403,20 @@ def command_read_merged(conn, queries_json):
         )
         row = cursor.fetchone()
         if not row:
+            logger.debug("Merged cache miss", extra={"query_hash": query_hash})
             sys.exit(1)
 
         results, created_at, ttl_days = row
         created_dt = parse_iso_datetime(created_at)
         if datetime.now(UTC) > created_dt + timedelta(days=ttl_days):
+            logger.debug("Merged cache expired", extra={"query_hash": query_hash})
             sys.exit(1)
 
+        logger.info("Merged cache hit", extra={"query_hash": query_hash})
         print(results, end="")
         sys.exit(0)
     except sqlite3.Error as e:
-        print(f"Error reading merged cache: {e}", file=sys.stderr)
+        logger.error("Merged cache read failed", extra={"query_hash": query_hash, "error": str(e)})
         sys.exit(1)
 
 
@@ -500,25 +430,16 @@ def command_purge_stale(conn):
         search_purged = cursor.rowcount
 
         cursor.execute(
-            "DELETE FROM response_cache WHERE datetime(created_at, '+' || ttl_days || ' days') < ?",
-            (now_iso,),
-        )
-        response_purged = cursor.rowcount
-
-        cursor.execute(
             "DELETE FROM merged_cache WHERE datetime(created_at, '+' || ttl_days || ' days') < ?",
             (now_iso,),
         )
         merged_purged = cursor.rowcount
 
         conn.commit()
-        print(
-            f"Purged: search={search_purged}, response={response_purged}, merged={merged_purged}",
-            file=sys.stderr,
-        )
+        logger.info("Cache purged", extra={"search_purged": search_purged, "merged_purged": merged_purged})
         sys.exit(0)
     except sqlite3.Error as e:
-        print(f"Error purging stale: {e}", file=sys.stderr)
+        logger.error("Cache purge failed", extra={"error": str(e)})
         sys.exit(1)
 
 
@@ -530,8 +451,8 @@ def main():
     db_path = args.cache_db
     try:
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-    except Exception as e:
-        print(f"Error creating cache directory: {e}", file=sys.stderr)
+    except (OSError, IOError) as e:
+        logger.error("Failed to create cache directory", extra={"db_path": db_path, "error": str(e)})
         sys.exit(1)
 
     # Connect to database
@@ -541,49 +462,25 @@ def main():
     try:
         if args.command == "check":
             if not args.channel or not args.query:
-                print("Error: check requires <channel> <query>", file=sys.stderr)
+                logger.error("check requires <channel> <query>")
                 sys.exit(1)
             command_check(conn, args.channel, args.query)
 
         elif args.command == "store":
             if not args.channel or not args.query or not args.results_json:
-                print(
-                    "Error: store requires <channel> <query> <results_json>",
-                    file=sys.stderr,
-                )
+                logger.error("store requires <channel> <query> <results_json>")
                 sys.exit(1)
             command_store(conn, args.channel, args.query, args.results_json)
 
-        elif args.command == "write-response":
-            if not args.channel or not args.query:
-                print(
-                    "Error: write-response requires <query> <response>",
-                    file=sys.stderr,
-                )
-                sys.exit(1)
-            command_write_response(conn, args.channel, args.query, args.source_pages)
-
-        elif args.command == "read-response":
-            if not args.channel:
-                print("Error: read-response requires <query>", file=sys.stderr)
-                sys.exit(1)
-            command_read_response(conn, args.channel)
-
         elif args.command == "write-merged":
             if not args.channel or not args.query:
-                print(
-                    "Error: write-merged requires <queries_json> <results_json>",
-                    file=sys.stderr,
-                )
+                logger.error("write-merged requires <queries_json> <results_json>")
                 sys.exit(1)
             command_write_merged(conn, args.channel, args.query)
 
         elif args.command == "read-merged":
             if not args.channel:
-                print(
-                    "Error: read-merged requires <queries_json>",
-                    file=sys.stderr,
-                )
+                logger.error("read-merged requires <queries_json>")
                 sys.exit(1)
             command_read_merged(conn, args.channel)
 

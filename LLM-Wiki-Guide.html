@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LLM-Wiki — Complete User &amp; Technical Guide</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,400;9..144,700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #fafaf9; --bg-alt: #f5f5f4; --bg-card: #ffffff; --border: #e7e5e4;
+  --text: #1c1917; --text-muted: #78716c; --text-light: #a8a29e;
+  --accent: #0f766e; --accent-light: #ccfbf1; --accent-hover: #115e59;
+  --code-bg: #1e293b; --code-text: #e2e8f0;
+  --warn: #d97706; --warn-bg: #fffbeb; --warn-border: #fde68a;
+  --info: #0284c7; --info-bg: #f0f9ff; --info-border: #bae6fd;
+  --success: #16a34a; --success-bg: #f0fdf4; --success-border: #bbf7d0;
+  --danger: #dc2626; --danger-bg: #fef2f2; --danger-border: #fecaca;
+  --sidebar-w: 280px; --header-h: 56px;
+  --radius: 6px; --shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+body { font-family:'IBM Plex Sans',system-ui,sans-serif; color:var(--text); background:var(--bg); line-height:1.65; font-size:15px; }
+h1,h2,h3,h4 { font-family:'Fraunces',Georgia,serif; font-weight:700; line-height:1.25; }
+.header { position:fixed; top:0; left:0; right:0; height:var(--header-h); background:var(--bg-card);
+  border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 24px; z-index:100; backdrop-filter:blur(12px); }
+.header-logo { font-family:'Fraunces',serif; font-size:20px; font-weight:700; color:var(--accent); }
+.header-logo span { color:var(--text-muted); font-weight:400; font-size:14px; margin-left:8px; }
+.header-badge { margin-left:12px; font-size:11px; font-weight:600; background:var(--accent-light); color:var(--accent); padding:2px 8px; border-radius:99px; }
+.header-right { margin-left:auto; display:flex; gap:12px; align-items:center; }
+.header-right a { font-size:13px; color:var(--text-muted); text-decoration:none; }
+.header-right a:hover { color:var(--accent); }
+.version-tag { font-size:11px; background:var(--bg-alt); border:1px solid var(--border); padding:2px 8px; border-radius:4px; color:var(--text-muted); }
+.sidebar { position:fixed; top:var(--header-h); left:0; bottom:0; width:var(--sidebar-w);
+  background:var(--bg-card); border-right:1px solid var(--border); overflow-y:auto; padding:16px 0; z-index:90; transition:transform .2s; }
+.sidebar::-webkit-scrollbar { width:4px; } .sidebar::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+.nav-section { padding:0 16px; margin-bottom:4px; }
+.nav-section-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--text-light); padding:12px 0 4px; }
+.nav-item { display:flex; align-items:center; gap:8px; padding:7px 12px; border-radius:var(--radius);
+  font-size:13.5px; color:var(--text-muted); cursor:pointer; transition:all .12s; text-decoration:none; }
+.nav-item:hover { background:var(--bg-alt); color:var(--text); }
+.nav-item.active { background:var(--accent-light); color:var(--accent); font-weight:500; }
+.nav-icon { width:16px; height:16px; flex-shrink:0; opacity:.6; }
+.nav-item.active .nav-icon { opacity:1; }
+.main { margin-left:var(--sidebar-w); margin-top:var(--header-h); padding:32px 48px 80px; max-width:960px; }
+.main section { margin-bottom:56px; }
+.section-title { font-size:28px; color:var(--text); margin-bottom:6px; }
+.section-subtitle { font-size:15px; color:var(--text-muted); margin-bottom:24px; }
+.card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px 24px; margin-bottom:16px; box-shadow:var(--shadow); }
+.card-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.card-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.card-title { font-family:'Fraunces',serif; font-size:17px; font-weight:700; }
+.card-desc { font-size:14px; color:var(--text-muted); line-height:1.6; }
+.code-block { background:var(--code-bg); color:var(--code-text); border-radius:var(--radius); padding:16px 20px; margin:12px 0; font-family:'IBM Plex Mono',monospace; font-size:13px; line-height:1.7; overflow-x:auto; position:relative; }
+.code-block .code-label { position:absolute; top:8px; right:12px; font-size:10px; color:#64748b; text-transform:uppercase; letter-spacing:.05em; }
+code { font-family:'IBM Plex Mono',monospace; font-size:13px; background:var(--bg-alt); padding:1px 5px; border-radius:3px; color:var(--accent); }
+.callout { border-radius:var(--radius); padding:14px 18px; margin:14px 0; font-size:14px; display:flex; gap:10px; }
+.callout-icon { font-size:16px; flex-shrink:0; margin-top:1px; }
+.callout.info { background:var(--info-bg); border:1px solid var(--info-border); color:#0c4a6e; }
+.callout.warn { background:var(--warn-bg); border:1px solid var(--warn-border); color:#92400e; }
+.callout.success { background:var(--success-bg); border:1px solid var(--success-border); color:#14532d; }
+.callout.danger { background:var(--danger-bg); border:1px solid var(--danger-border); color:#7f1d1d; }
+.table-wrap { overflow-x:auto; margin:12px 0; }
+table { width:100%; border-collapse:collapse; font-size:13.5px; }
+th { text-align:left; font-weight:600; padding:10px 14px; background:var(--bg-alt); border-bottom:2px solid var(--border); font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); }
+td { padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:top; }
+tr:hover td { background:var(--bg-alt); }
+.badge { display:inline-flex; align-items:center; font-size:11px; font-weight:600; padding:2px 8px; border-radius:99px; letter-spacing:.02em; }
+.badge.green { background:#dcfce7; color:#166534; } .badge.blue { background:#dbeafe; color:#1e40af; }
+.badge.amber { background:#fef3c7; color:#92400e; } .badge.red { background:#fee2e2; color:#991b1b; }
+.badge.gray { background:#f3f4f6; color:#4b5563; } .badge.teal { background:var(--accent-light); color:var(--accent); }
+.step { display:flex; gap:16px; margin-bottom:20px; }
+.step-num { width:28px; height:28px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0; margin-top:2px; }
+.step-body { flex:1; } .step-title { font-weight:600; font-size:15px; margin-bottom:4px; }
+.step-desc { font-size:14px; color:var(--text-muted); }
+.diagram { background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius); padding:24px; margin:16px 0; overflow-x:auto; }
+.diagram svg { display:block; margin:0 auto; }
+.tabs { display:flex; gap:2px; border-bottom:2px solid var(--border); margin-bottom:16px; }
+.tab { padding:8px 16px; font-size:13px; font-weight:500; color:var(--text-muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .12s; }
+.tab:hover { color:var(--text); } .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+.expand-header { display:flex; align-items:center; gap:8px; cursor:pointer; padding:10px 0; user-select:none; }
+.expand-header:hover { color:var(--accent); }
+.expand-arrow { transition:transform .2s; font-size:12px; } .expand-arrow.open { transform:rotate(90deg); }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+.flow-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:12px 0; }
+.flow-box { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:8px 14px; font-size:13px; font-weight:500; white-space:nowrap; }
+.flow-arrow { color:var(--text-light); font-size:18px; }
+.search-box { display:flex; align-items:center; gap:8px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius); padding:8px 14px; margin-bottom:20px; }
+.search-box input { flex:1; border:none; background:none; outline:none; font-size:14px; font-family:inherit; color:var(--text); }
+.search-box input::placeholder { color:var(--text-light); }
+.dep-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:12px 16px; margin-bottom:8px; }
+.dep-card .dep-name { font-weight:600; font-size:14px; } .dep-card .dep-type { font-size:11px; font-weight:600; }
+.mobile-toggle { display:none; background:none; border:none; cursor:pointer; padding:8px; }
+@media(max-width:860px) {
+  .sidebar { transform:translateX(-100%); } .sidebar.open { transform:translateX(0); }
+  .main { margin-left:0; padding:24px 20px 80px; }
+  .mobile-toggle { display:block; } .grid-2,.grid-3 { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState, useEffect, useCallback} = React;
+
+const Icons = {
+  book: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
+  download: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+  layers: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>,
+  terminal: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>,
+  cpu: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>,
+  globe: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+  search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  bot: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>,
+  wrench: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>,
+  database: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>,
+  zap: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+  shield: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+  monitor: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
+  pkg: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16.5 9.4l-9-5.19"/><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
+  menu: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
+};
+
+const NAV = [
+  {group:"Getting Started", items:[
+    {id:"overview",icon:"book",label:"Overview"},
+    {id:"install",icon:"download",label:"Installation"},
+    {id:"quickstart",icon:"zap",label:"Quick Start"},
+  ]},
+  {group:"Architecture", items:[
+    {id:"architecture",icon:"layers",label:"System Architecture"},
+    {id:"data-model",icon:"database",label:"Data Model"},
+    {id:"mcp",icon:"cpu",label:"MCP Server"},
+  ]},
+  {group:"User Guide", items:[
+    {id:"skills",icon:"terminal",label:"Skills (Commands)"},
+    {id:"agents",icon:"bot",label:"Agents"},
+    {id:"webui",icon:"monitor",label:"Web UI"},
+    {id:"cli",icon:"wrench",label:"CLI Utilities"},
+  ]},
+  {group:"Technical Reference", items:[
+    {id:"search",icon:"search",label:"Search & Retrieval"},
+    {id:"research",icon:"globe",label:"Research Engine"},
+    {id:"quality",icon:"shield",label:"Quality & Provenance"},
+    {id:"deps",icon:"pkg",label:"Dependencies"},
+  ]},
+];
+
+const SKILLS = [
+  {cmd:"/wiki-write", args:"<source>", purpose:"Add content from URL, file, or text", color:"#0f766e",
+   details:"Ingests content autonomously into the wiki. Accepts URLs (fetched via Jina Reader \u2192 Trafilatura \u2192 raw HTML chain), local file paths, inline text, batch directories, or slug updates. Auto-creates the .wiki/ structure on first use. Each ingest generates a page with full YAML frontmatter, creates backlinks, updates index.md, and appends to log.md. Custom page types are supported via templates in .wiki/templates/.",
+   examples:["/wiki-write https://arxiv.org/abs/2301.13379","/wiki-write ./notes/meeting.md",'/wiki-write "React Server Components enable streaming SSR"',"/wiki-write --batch ./research-papers/","/wiki-write --update transformer-architecture","/wiki-write --refresh-stale"],
+   flow:["Source input","Fetch / read","Extract content","Generate slug","Detect contradictions","Save to .wiki/pages/","Update backlinks","Update index.md"]},
+  {cmd:"/wiki-read", args:"<question>", purpose:"Search wiki, get cited answers", color:"#0284c7",
+   details:"Queries the wiki knowledge base and synthesizes cited answers. Three depth modes: quick (index scan only), standard (reads 2\u20134 relevant pages), deep (articles + raw sources + cross-references). Uses TF-IDF full-text search for ranked results. All answers include [[slug]] citations. Contradictions between sources are explicitly noted.",
+   examples:["/wiki-read What is RLHF?","/wiki-read quick list all ML pages","/wiki-read deep How do transformers handle long-range dependencies?"],
+   flow:["Parse question","Check index.md","Full-text search","Read relevant pages","Synthesize answer","Add [[citations]]","Note contradictions"]},
+  {cmd:"/wiki-research", args:"<topic>", purpose:"Multi-channel web research with auto-ingestion", color:"#7c3aed",
+   details:"Launches web search via Claude's built-in tools, with optional docs channel (Context7 MCP, if installed). Results are deduplicated by URL and title similarity (>85%). Sources ranked by credibility tier with bonuses for corroboration. Deep-dive mode runs autonomous iterative research loops (max 3 iterations) with checkpoint-based rollback.",
+   examples:["/wiki-research transformer attention mechanisms","/wiki-research scan latest developments in MCP protocol","/wiki-research deep-dive quantum error correction","/wiki-research refresh transformer-architecture","/wiki-research cache stats"],
+   flow:["Classify complexity","Check existing wiki","Generate query variants","Fan out to channels","Merge & deduplicate","Rank by credibility","Ingest top results","Update wiki"]},
+  {cmd:"/wiki-serve", args:"", purpose:"Start Wikipedia-style website on localhost:8420", color:"#dc2626",
+   details:"Launches a FastAPI web server with a Wikipedia-style browsable interface. Only runs when explicitly invoked. Features: 4 themes (light, dark, terminal, Wikipedia), interactive knowledge graph (Cytoscape.js), split-pane markdown editor with live preview, WebSocket chat with RAG-augmented Q&A, live research (click any red link to auto-research), spaced repetition review (FSRS), content gap analysis, canvas/whiteboard view, and SSE progress streaming. Can also be launched manually via CLI.",
+   examples:["/wiki-serve","/wiki-serve stop","python skills/serve/scripts/server.py --wiki-dir .wiki/ --port 8420"],
+   flow:["Start FastAPI","Build search index","Load WikiStore","Init WebSocket","Open browser","Serve at :8420"]},
+  {cmd:"/wiki-maintain", args:"", purpose:"Lint, deduplicate, upgrade confidence, gap analysis", color:"#ea580c",
+   details:"Runs comprehensive wiki health maintenance. Lint pass: fixes broken [[links]], missing frontmatter fields, detects orphan pages. Dedup pass: finds pages with >60% slug token overlap, suggests merges. Confidence upgrades: promotes pages from low\u2192medium (2+ sources) or medium\u2192high (3+ corroborating). Stale detection: flags pages >90 days without update. Auto-generates concept synthesis articles when 3+ pages share link targets.",
+   examples:["/wiki-maintain","/wiki-maintain lint","/wiki-maintain dedup","/wiki-maintain gaps"],
+   flow:["Scan all pages","Lint broken links","Fix frontmatter","Detect duplicates","Upgrade confidence","Flag stale content","Analyze gaps","Regenerate index"]},
+  {cmd:"/wiki-view", args:"", purpose:"Dashboard, knowledge graph, stats, export", color:"#2563eb",
+   details:"Provides read-only dashboard views and export capabilities. Dashboard shows page counts by type and confidence, recent activity, and health metrics. Knowledge graph renders an interactive visualization. Export supports HTML (self-contained with sidebar + search), Markdown (with TOC), and JSON (nodes + edges). Can also generate derived artifacts: study guides, timelines, glossaries, and comparison tables.",
+   examples:["/wiki-view","/wiki-view pages","/wiki-view stats","/wiki-view graph","/wiki-view graph transformer-architecture","/wiki-view export html","/wiki-view export json","/wiki-view artifacts glossary"],
+   flow:["Read wiki state","Compute metrics","Render dashboard","Generate graph","Export format"]},
+];
+
+const AGENTS = [
+  {name:"wiki-writer",desc:"Creates and updates wiki pages. Both ingest and update modes are fully autonomous. Handles slug generation, frontmatter creation, contradiction detection, backlink cascading, and concurrent write safety via lock files. Supports custom page type templates from .wiki/templates/.",trigger:"Any write operation to the wiki",color:"#0f766e"},
+  {name:"wiki-reader",desc:"Answers questions from wiki knowledge. Navigates via index.md, supports quick/standard/deep depth modes. Uses TF-IDF full-text search for ranked results. Cites via [[slug]] references and presents contradictions explicitly.",trigger:"Any question that might be answered by wiki content",color:"#0284c7"},
+  {name:"wiki-auditor",desc:"Audits wiki health inline. Scans all pages for broken links, missing frontmatter, orphan pages, near-duplicates (Jaccard >60%), and dead index entries. Applies fixes directly to files.",trigger:"/wiki-maintain command or periodic health checks",color:"#ea580c"},
+  {name:"search-orchestrator",desc:"Orchestrates multi-channel search. Classifies research complexity (simple/moderate/complex), checks existing wiki coverage, generates diverse query variants, fans out to channel subagents, and merges/deduplicates results by URL, DOI, and title similarity.",trigger:"/wiki-research command with any topic",color:"#7c3aed"},
+  {name:"search-channel",desc:"Executes parameterized searches for a specific channel type (web, docs). Each channel has its own fetch logic, caching TTL, and result normalization. Returns standardized {title, url, snippet, source_type, credibility_tier} objects.",trigger:"Called by search-orchestrator for each channel",color:"#6366f1"},
+  {name:"research-loop",desc:"Runs autonomous iterative research (max 3 iterations). Each iteration: creates checkpoint, generates hypotheses, launches search-orchestrator, ingests via wiki-writer, evaluates quality metrics, and keeps or discards based on improvement. Stops early if metrics plateau.",trigger:"/wiki-research deep-dive command",color:"#9333ea"},
+  {name:"research-processor",desc:"Post-processes parallel research results from search-orchestrator. Two modes: condense (extract findings, deduplicate, score confidence, detect stale) and deduplicate (merge by URL, DOI, title similarity >85%, content hash). Ranks by credibility \u00d7 corroboration \u00d7 recency.",trigger:"Called by search-orchestrator after channel results are collected",color:"#a855f7"},
+  {name:"fact-checker",desc:"Verifies factual claims against external sources. Extracts verifiable claims (numbers, dates, entities, comparisons), verifies each via WebSearch (max 3 searches/claim, 10 claims/page). Assigns status: verified, unverified, disputed, or outdated.",trigger:"/wiki-maintain fact-check or during deep-dive research iterations",color:"#dc2626"},
+  {name:"citation-explorer",desc:"Explores citation chains for a topic. Uses web search to trace citation relationships, identifies key papers by citation count, recency, and relevance. Recommends top 5\u201310 papers for wiki ingestion.",trigger:"During deep-dive research iterations when citation chains are relevant",color:"#0891b2"},
+];
+
+const CLI_UTILS = [
+  {name:"backlinks.py",desc:"SQLite-backed backlink index \u2014 build, query, verify bidirectional consistency, detect broken links and orphans"},
+  {name:"cache.py",desc:"2-layer search cache with channel-specific TTLs (web:7d, docs:7d), stale-while-revalidate, adaptive TTL"},
+  {name:"circuit_breaker.py",desc:"Circuit breaker for external APIs \u2014 closed\u2192open\u2192half-open states, 5-failure threshold, 300s cooldown"},
+  {name:"claims.py",desc:"Claim extraction & verification tracking \u2014 quantitative, entity, comparative claim types with status lifecycle"},
+  {name:"daily.py",desc:"Daily notes & journal \u2014 templated daily pages, weekly rollup summaries, date-range search"},
+  {name:"diff.py",desc:"Structured wiki page diffs \u2014 frontmatter, sections, links comparison with JSON/markdown/HTML output"},
+  {name:"exceptions.py",desc:"Custom exception hierarchy \u2014 WikiError base class with FetchError, CacheError, SearchError, PageNotFoundError, etc."},
+  {name:"export.py",desc:"Multi-format export \u2014 self-contained HTML with navigation, Markdown with TOC, JSON knowledge graph"},
+  {name:"fetch.py",desc:"URL fetching with extraction chain: Jina Reader \u2192 Trafilatura \u2192 raw HTML fallback, markdown conversion"},
+  {name:"flashcards.py",desc:"FSRS-based spaced repetition \u2014 question/definition/takeaway cards, difficulty + stability tracking, due scheduling"},
+  {name:"gaps.py",desc:"Multi-dimensional gap analysis \u2014 structural holes, depth gaps, freshness gaps, missing pages, isolated nodes"},
+  {name:"mentions.py",desc:"Unlinked mention detection \u2014 case-insensitive title scanning across all pages with context and line numbers"},
+  {name:"provenance.py",desc:"W3C PROV-inspired provenance \u2014 activities, entities, derivations with full chain tracing and graph export"},
+  {name:"query.py",desc:"Frontmatter query engine \u2014 Dataview-like SELECT/COUNT/LIST syntax for querying wiki page metadata"},
+  {name:"rag.py",desc:"RAG pipeline \u2014 TF-IDF full-text search with section chunking, citation-grounded Q&A prompts"},
+  {name:"search-fulltext.py",desc:"TF-IDF full-text search \u2014 in-memory index, stop word filtering, title/paragraph boosts, snippet extraction"},
+  {name:"tools.py",desc:"Deterministic utilities replacing LLM calls \u2014 slug dedup, similarity scoring, summarization to save tokens"},
+  {name:"wiki_git.py",desc:"Activity logging with attribution and history tracking"},
+  {name:"wiki_logging.py",desc:"Shared logging configuration \u2014 structured JSON or colored text output, configurable via WIKI_LOG_LEVEL / WIKI_LOG_FORMAT"},
+];
+
+const MCP_TOOLS = [
+  {name:"wiki_search",args:"query, limit?",desc:"Full-text search across all wiki pages, returns ranked results with snippets"},
+  {name:"wiki_read",args:"slug",desc:"Read a single wiki page by slug, returns full content with frontmatter"},
+  {name:"wiki_write",args:"slug, content, frontmatter",desc:"Create or update a wiki page with YAML frontmatter and markdown body"},
+  {name:"wiki_list",args:"type?, confidence?",desc:"List all pages with optional filtering by type and confidence level"},
+  {name:"wiki_backlinks",args:"slug",desc:"Get all pages that link to the given page slug"},
+  {name:"wiki_stats",args:"",desc:"Wiki-wide statistics: page counts by type, confidence distribution, link density"},
+  {name:"wiki_query",args:"query_string",desc:"Dataview-like frontmatter queries (SELECT, COUNT, LIST syntax)"},
+  {name:"wiki_gaps",args:"",desc:"Content gap analysis: missing pages, shallow hubs, stale content, structural holes"},
+  {name:"wiki_daily",args:"date?",desc:"Create or retrieve daily note page for the given date (defaults to today)"},
+];
+
+const EXTERNAL_DEPS = [
+  {name:"Claude Code",type:"required",cat:"Host",desc:"Plugin host environment. LLM-Wiki is a Claude Code plugin and requires Claude Code to run."},
+  {name:"Python 3.10+",type:"required",cat:"Runtime",desc:"All bin/ scripts, MCP server, and web server are Python."},
+  {name:"FastAPI + Uvicorn",type:"required",cat:"Python (pip)",desc:"Powers the /wiki-serve web UI. Installed via requirements.txt."},
+  {name:"markdown-it-py + mdit-py-plugins",type:"required",cat:"Python (pip)",desc:"Markdown rendering for wiki pages. Installed via requirements.txt."},
+  {name:"Jinja2",type:"required",cat:"Python (pip)",desc:"HTML template engine for the web UI. Installed via requirements.txt."},
+  {name:"watchdog",type:"required",cat:"Python (pip)",desc:"Filesystem watcher for live-reloading wiki changes in the web UI."},
+  {name:"aiosqlite",type:"required",cat:"Python (pip)",desc:"Async SQLite access for the web server's WikiStore."},
+  {name:"websockets",type:"required",cat:"Python (pip)",desc:"WebSocket support for the chat sidebar in the web UI."},
+  {name:"mcp",type:"required",cat:"Python (pip)",desc:"Model Context Protocol SDK for the wiki MCP server."},
+  {name:"Jina Reader API",type:"external",cat:"Free API",desc:"URL content extraction (first method in the fetch chain). Used by fetch.py. Free tier available."},
+  {name:"Context7 MCP",type:"external",cat:"MCP Server",desc:"Documentation search channel. Used by the docs search channel if installed. Requires separate MCP server installation. Falls back to WebSearch with site filters if unavailable."},
+  {name:"Claude Code WebSearch",type:"builtin",cat:"Built-in",desc:"Web search tool built into Claude Code. Used by the web search channel and fact-checker agent."},
+];
+
+function Expandable({title, children, defaultOpen=false}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return <div style={{borderBottom:'1px solid var(--border)', marginBottom:4}}>
+    <div className="expand-header" onClick={()=>setOpen(!open)}>
+      <span className={`expand-arrow ${open?'open':''}`}>{'\u25B6'}</span>
+      <span style={{fontWeight:600,fontSize:14}}>{title}</span>
+    </div>
+    {open && <div style={{paddingBottom:12,paddingLeft:4}}>{children}</div>}
+  </div>;
+}
+function CodeBlock({children, label}) {
+  return <div className="code-block">{label && <span className="code-label">{label}</span>}<pre style={{margin:0,whiteSpace:'pre-wrap'}}>{children}</pre></div>;
+}
+function Callout({type="info", children}) {
+  const icons = {info:"\u2139\uFE0F", warn:"\u26A0\uFE0F", success:"\u2705", danger:"\uD83D\uDEAB"};
+  return <div className={`callout ${type}`}><span className="callout-icon">{icons[type]}</span><div>{children}</div></div>;
+}
+function FlowDiagram({steps}) {
+  return <div className="flow-row">{steps.map((s,i) => <React.Fragment key={i}>{i>0 && <span className="flow-arrow">{'\u2192'}</span>}<span className="flow-box">{s}</span></React.Fragment>)}</div>;
+}
+function Badge({color="teal", children}) { return <span className={`badge ${color}`}>{children}</span>; }
+
+function ArchDiagram() {
+  return <div className="diagram">
+    <svg width="820" height="480" viewBox="0 0 820 480" style={{fontFamily:'IBM Plex Sans,sans-serif'}}>
+      <text x="410" y="24" textAnchor="middle" fontSize="14" fontWeight="700" fill="#1c1917">LLM-Wiki System Architecture</text>
+      <rect x="20" y="44" width="780" height="60" rx="8" fill="#f0fdf4" stroke="#86efac" strokeWidth="1.5"/>
+      <text x="40" y="65" fontSize="10" fontWeight="600" fill="#166534" letterSpacing=".06em">USER LAYER</text>
+      {[["Claude Code",40],["CLI Skills",160],["Web UI :8420",280],["MCP Clients",420],["Obsidian",560]].map(([l,x])=>
+        <React.Fragment key={l}><rect x={x} y="72" width={l.length>10?120:100} height="24" rx="4" fill="#fff" stroke="#86efac"/>
+        <text x={x+(l.length>10?60:50)} y="88" textAnchor="middle" fontSize="11" fill="#166534">{l}</text></React.Fragment>)}
+      <line x1="410" y1="104" x2="410" y2="130" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arrow)"/>
+      <rect x="20" y="130" width="780" height="100" rx="8" fill="#eff6ff" stroke="#93c5fd" strokeWidth="1.5"/>
+      <text x="40" y="151" fontSize="10" fontWeight="600" fill="#1e40af" letterSpacing=".06em">AGENT LAYER \u2014 9 Autonomous Agents</text>
+      {[["wiki-writer",40],["wiki-reader",158],["wiki-auditor",276],["search-orch.",394],["search-channel",512]].map(([l,x])=>
+        <React.Fragment key={l}><rect x={x} y="160" width="108" height="24" rx="4" fill="#fff" stroke="#93c5fd"/>
+        <text x={x+54} y="176" textAnchor="middle" fontSize="10" fill="#1e40af">{l}</text></React.Fragment>)}
+      {[["research-loop",40],["research-proc.",158],["fact-checker",276],["citation-expl.",394]].map(([l,x])=>
+        <React.Fragment key={l}><rect x={x} y="195" width="108" height="24" rx="4" fill="#fff" stroke="#93c5fd"/>
+        <text x={x+54} y="211" textAnchor="middle" fontSize="10" fill="#1e40af">{l}</text></React.Fragment>)}
+      <line x1="410" y1="230" x2="410" y2="256" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arrow)"/>
+      <rect x="20" y="256" width="380" height="80" rx="8" fill="#faf5ff" stroke="#d8b4fe" strokeWidth="1.5"/>
+      <text x="40" y="277" fontSize="10" fontWeight="600" fill="#6b21a8" letterSpacing=".06em">BIN/ UTILITIES \u2014 24 Scripts</text>
+      <text x="40" y="296" fontSize="10" fill="#7e22ce">embed.py \u00b7 rag.py \u00b7 fetch.py \u00b7 query.py</text>
+      <text x="40" y="311" fontSize="10" fill="#7e22ce">backlinks.py \u00b7 cache.py \u00b7 circuit_breaker.py</text>
+      <text x="40" y="326" fontSize="10" fill="#7e22ce">wiki_logging.py \u00b7 exceptions.py \u00b7 search-*.py \u00b7 ...</text>
+      <rect x="420" y="256" width="380" height="80" rx="8" fill="#fff7ed" stroke="#fdba74" strokeWidth="1.5"/>
+      <text x="440" y="277" fontSize="10" fontWeight="600" fill="#9a3412" letterSpacing=".06em">SERVERS</text>
+      <rect x="440" y="286" width="155" height="24" rx="4" fill="#fff" stroke="#fdba74"/>
+      <text x="517" y="302" textAnchor="middle" fontSize="10" fill="#9a3412">MCP Server (FastMCP)</text>
+      <rect x="440" y="316" width="155" height="14" rx="4" fill="#fff" stroke="#fdba74"/>
+      <text x="517" y="327" textAnchor="middle" fontSize="9" fill="#9a3412">FastAPI (on-demand)</text>
+      <rect x="615" y="286" width="165" height="44" rx="4" fill="#fff" stroke="#fdba74"/>
+      <text x="697" y="306" textAnchor="middle" fontSize="10" fill="#9a3412">WikiStore \u00b7 RAG Handler</text>
+      <text x="697" y="322" textAnchor="middle" fontSize="10" fill="#9a3412">ChatManager \u00b7 ResearchQ</text>
+      <line x1="210" y1="336" x2="210" y2="362" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arrow)"/>
+      <line x1="610" y1="336" x2="610" y2="362" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arrow)"/>
+      <rect x="20" y="362" width="780" height="56" rx="8" fill="#fefce8" stroke="#fde047" strokeWidth="1.5"/>
+      <text x="40" y="383" fontSize="10" fontWeight="600" fill="#854d0e" letterSpacing=".06em">DATA LAYER \u2014 .wiki/ directory</text>
+      {[["pages/",40],["templates/",130],["index.md",225],["log.md",315],["cache/",395],["raw/",475]].map(([l,x])=>
+        <React.Fragment key={l}><rect x={x} y="392" width={80} height="20" rx="4" fill="#fff" stroke="#fde047"/>
+        <text x={x+40} y="406" textAnchor="middle" fontSize="10" fill="#854d0e">{l}</text></React.Fragment>)}
+      <rect x="20" y="436" width="780" height="36" rx="8" fill="#fdf2f8" stroke="#f9a8d4" strokeWidth="1.5"/>
+      <text x="40" y="459" fontSize="10" fontWeight="600" fill="#9d174d" letterSpacing=".06em">EXTERNAL</text>
+      <text x="140" y="459" fontSize="10" fill="#be185d">Jina Reader \u00b7 Context7 (optional) \u00b7 WebSearch (built-in)</text>
+      <defs><marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#a8a29e"/></marker></defs>
+    </svg>
+  </div>;
+}
+
+function SearchPipelineDiagram() {
+  return <div className="diagram">
+    <svg width="780" height="220" viewBox="0 0 780 220" style={{fontFamily:'IBM Plex Sans,sans-serif'}}>
+      <text x="390" y="22" textAnchor="middle" fontSize="13" fontWeight="700" fill="#1c1917">TF-IDF Full-Text Search Pipeline</text>
+      <rect x="310" y="40" width="160" height="32" rx="6" fill="#0f766e"/>
+      <text x="390" y="61" textAnchor="middle" fontSize="12" fontWeight="600" fill="#fff">User Query</text>
+      <line x1="390" y1="72" x2="390" y2="100" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arr2)"/>
+      <rect x="240" y="100" width="300" height="50" rx="6" fill="#eff6ff" stroke="#93c5fd"/>
+      <text x="390" y="122" textAnchor="middle" fontSize="11" fontWeight="600" fill="#1e40af">TF-IDF Keyword Search</text>
+      <text x="390" y="138" textAnchor="middle" fontSize="9" fill="#3b82f6">In-memory index \u00b7 Stop words \u00b7 Title + paragraph boosts</text>
+      <line x1="390" y1="150" x2="390" y2="180" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arr2)"/>
+      <rect x="290" y="180" width="200" height="30" rx="6" fill="#f0fdf4" stroke="#86efac"/>
+      <text x="390" y="199" textAnchor="middle" fontSize="11" fontWeight="600" fill="#166534">Ranked Results + Snippets</text>
+      <defs><marker id="arr2" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#a8a29e"/></marker></defs>
+    </svg>
+  </div>;
+}
+
+function App() {
+  const [active, setActive] = useState("overview");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [skillTab, setSkillTab] = useState(0);
+  const [depFilter, setDepFilter] = useState("all");
+
+  const scrollTo = useCallback((id) => { setActive(id); setSidebarOpen(false); document.getElementById(id)?.scrollIntoView({behavior:'smooth'}); },[]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if(e.isIntersecting) setActive(e.target.id); });
+    }, {rootMargin:'-80px 0px -60% 0px'});
+    NAV.forEach(g => g.items.forEach(i => { const el = document.getElementById(i.id); if(el) observer.observe(el); }));
+    return () => observer.disconnect();
+  },[]);
+
+  const filteredDeps = depFilter === "all" ? EXTERNAL_DEPS : EXTERNAL_DEPS.filter(d => d.type === depFilter);
+
+  return <>
+    <header className="header">
+      <button className="mobile-toggle" onClick={()=>setSidebarOpen(!sidebarOpen)}><span className="nav-icon">{Icons.menu}</span></button>
+      <span className="header-logo">LLM-Wiki <span>Guide</span></span>
+      <span className="header-badge">v1.0.0</span>
+      <div className="header-right">
+        <a href="https://github.com/Oshayr/llm-wiki" target="_blank" rel="noopener">GitHub</a>
+        <span className="version-tag">April 2026</span>
+      </div>
+    </header>
+
+    <nav className={`sidebar ${sidebarOpen?'open':''}`}>
+      {NAV.map(g => <div className="nav-section" key={g.group}>
+        <div className="nav-section-label">{g.group}</div>
+        {g.items.map(i => <a key={i.id} className={`nav-item ${active===i.id?'active':''}`} onClick={()=>scrollTo(i.id)}>
+          <span className="nav-icon">{Icons[i.icon]}</span> {i.label}
+        </a>)}
+      </div>)}
+      <div style={{padding:'16px',borderTop:'1px solid var(--border)',marginTop:12}}>
+        <div style={{fontSize:11,color:'var(--text-light)'}}>Built by <strong style={{color:'var(--text-muted)'}}>Oshayr</strong></div>
+        <div style={{fontSize:10,color:'var(--text-light)',marginTop:2}}>MIT License</div>
+      </div>
+    </nav>
+
+    <main className="main">
+
+      {/* OVERVIEW */}
+      <section id="overview">
+        <h1 className="section-title">LLM-Wiki</h1>
+        <p className="section-subtitle">LLM-powered personal wiki for Claude Code. Autonomous knowledge base with full-text search, web research, and a Wikipedia-style web UI.</p>
+        <div className="card">
+          <div className="card-header"><div className="card-icon" style={{background:'#f0fdf4'}}>📖</div><div><div className="card-title">The Karpathy Pattern</div></div></div>
+          <div className="card-desc">
+            <p>LLM-Wiki implements <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f" target="_blank" rel="noopener">Andrej Karpathy's LLM Wiki pattern</a>. Instead of traditional RAG where the LLM rediscovers knowledge from raw documents on every query, the LLM pre-compiles source materials into a structured, interlinked wiki of markdown files. Raw sources remain immutable in <code>raw/</code>, the LLM maintains the wiki layer in <code>pages/</code>, and a schema governs quality standards. Knowledge compounds over time.</p>
+            <br/><p>Every claim traces back to a specific <code>.md</code> file that can be read, edited, or deleted. The wiki is compatible with Obsidian — open <code>.wiki/</code> as a vault for graph visualization and editing.</p>
+          </div>
+        </div>
+        <h3 style={{marginTop:24,marginBottom:12}}>How It Works</h3>
+        <div className="grid-2">
+          <div className="card"><strong>1. You work normally</strong><p className="card-desc" style={{marginTop:4}}>Claude saves relevant knowledge to the wiki automatically as you research, discuss, and build.</p></div>
+          <div className="card"><strong>2. Wiki grows</strong><p className="card-desc" style={{marginTop:4}}>Research findings, ideas, decisions, and patterns accumulate as interlinked pages with confidence levels and source citations.</p></div>
+          <div className="card"><strong>3. Wiki serves you</strong><p className="card-desc" style={{marginTop:4}}>Claude checks the wiki first when you ask questions, citing existing knowledge with <code>[[slug]]</code> references before searching the web.</p></div>
+          <div className="card"><strong>4. Wiki maintains itself</strong><p className="card-desc" style={{marginTop:4}}>Periodic lint, deduplication, confidence upgrades, stale detection, and gap analysis keep the knowledge base healthy.</p></div>
+        </div>
+        <h3 style={{marginTop:24,marginBottom:12}}>Capabilities</h3>
+        <div className="table-wrap"><table><thead><tr><th>Category</th><th>Features</th></tr></thead><tbody>
+          <tr><td><Badge color="green">Knowledge</Badge></td><td>Auto-capture, TF-IDF full-text search, block references, backlinks, frontmatter queries, custom page types</td></tr>
+          <tr><td><Badge color="blue">Research</Badge></td><td>Web search, autonomous research loops, fact-checking, provenance</td></tr>
+          <tr><td><Badge color="amber">Web UI</Badge></td><td>4 themes, Cytoscape.js knowledge graph, canvas view, split editor, WebSocket chat, FSRS review</td></tr>
+          <tr><td><Badge color="teal">Maintenance</Badge></td><td>Auto-lint, dedup, confidence upgrades, daily notes, structured logging, circuit breakers</td></tr>
+        </tbody></table></div>
+      </section>
+
+      {/* INSTALLATION */}
+      <section id="install">
+        <h1 className="section-title">Installation</h1>
+        <p className="section-subtitle">Step-by-step setup for Claude Code environments.</p>
+        <h3 style={{marginTop:20,marginBottom:16}}>Prerequisites</h3>
+        <div className="table-wrap"><table><thead><tr><th>Requirement</th><th>Version</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td><code>Claude Code</code></td><td>Latest</td><td>Plugin host environment</td></tr>
+          <tr><td><code>Python</code></td><td>3.10+</td><td>All bin/ scripts, MCP server, web server</td></tr>
+          <tr><td><code>pip</code></td><td>Latest</td><td>Dependency installation</td></tr>
+        </tbody></table></div>
+        <h3 style={{marginTop:24,marginBottom:16}}>Steps</h3>
+        <div className="step"><div className="step-num">1</div><div className="step-body">
+          <div className="step-title">Copy the Plugin</div>
+          <div className="step-desc">Copy LLM-Wiki into Claude Code's plugin directory.</div>
+          <CodeBlock label="bash">cp -r llm-wiki .claude/plugins/</CodeBlock>
+        </div></div>
+        <div className="step"><div className="step-num">2</div><div className="step-body">
+          <div className="step-title">Install Python Dependencies</div>
+          <div className="step-desc">Install the required packages for the web server and MCP server. Core bin/ scripts use only the Python standard library.</div>
+          <CodeBlock label="bash">pip install -r .claude/plugins/llm-wiki/requirements.txt</CodeBlock>
+          <Callout type="info">Installs: <code>fastapi</code>, <code>uvicorn</code>, <code>markdown-it-py</code>, <code>mdit-py-plugins</code>, <code>jinja2</code>, <code>watchdog</code>, <code>aiosqlite</code>, <code>websockets</code>, <code>mcp</code>.</Callout>
+        </div></div>
+        <div className="step"><div className="step-num">3</div><div className="step-body">
+          <div className="step-title">Restart Claude Code</div>
+          <div className="step-desc">Restart Claude Code or run <code>/reload-plugins</code>. Verify the 6 slash commands are available: <code>/wiki-write</code>, <code>/wiki-read</code>, <code>/wiki-research</code>, <code>/wiki-serve</code>, <code>/wiki-maintain</code>, <code>/wiki-view</code>.</div>
+        </div></div>
+        <div className="step"><div className="step-num">4</div><div className="step-body">
+          <div className="step-title">First Use</div>
+          <div className="step-desc">The <code>.wiki/</code> data directory is created automatically in the current working directory when any wiki operation runs. Location can be overridden by the user. It creates: <code>pages/</code>, <code>templates/</code>, <code>index.md</code>, <code>log.md</code>, <code>overview.md</code>, <code>SCHEMA.md</code>, <code>cache/</code>, and <code>raw/</code>.</div>
+        </div></div>
+      </section>
+
+      {/* QUICK START */}
+      <section id="quickstart">
+        <h1 className="section-title">Quick Start</h1>
+        <p className="section-subtitle">Common workflows.</p>
+        <Expandable title="Ingest a web page" defaultOpen={true}>
+          <CodeBlock label="Claude Code">/wiki-write https://arxiv.org/abs/2301.13379</CodeBlock>
+          <p style={{fontSize:14,color:'var(--text-muted)',marginTop:8}}>Fetches the page (Jina Reader → Trafilatura → raw HTML fallback), extracts key content, creates a wiki page with frontmatter, stores the raw source in <code>.wiki/raw/web/</code>, updates backlinks and <code>index.md</code>.</p>
+        </Expandable>
+        <Expandable title="Ask the wiki a question">
+          <CodeBlock label="Claude Code">/wiki-read What is the difference between RLHF and DPO?</CodeBlock>
+          <p style={{fontSize:14,color:'var(--text-muted)',marginTop:8}}>Searches the wiki, reads 2–4 relevant pages, synthesizes an answer with <code>[[slug]]</code> citations.</p>
+        </Expandable>
+        <Expandable title="Research a topic">
+          <CodeBlock label="Claude Code">/wiki-research transformer attention mechanisms</CodeBlock>
+          <p style={{fontSize:14,color:'var(--text-muted)',marginTop:8}}>Parallel searches across web, academic, code, and docs channels. Deduplicates, ranks by credibility, and auto-ingests top results.</p>
+        </Expandable>
+        <Expandable title="Browse in browser">
+          <CodeBlock label="Claude Code">/wiki-serve</CodeBlock>
+          <p style={{fontSize:14,color:'var(--text-muted)',marginTop:8}}>Starts a local website at <code>localhost:8420</code>. Browse pages, view the knowledge graph, edit content, chat with the wiki, click red links to auto-research.</p>
+          <p style={{fontSize:14,color:'var(--text-muted)',marginTop:4}}>Manual CLI launch:</p>
+          <CodeBlock label="bash">python .claude/plugins/llm-wiki/skills/serve/scripts/server.py --wiki-dir .wiki/ --port 8420</CodeBlock>
+        </Expandable>
+        <Expandable title="Run a health check">
+          <CodeBlock label="Claude Code">/wiki-maintain</CodeBlock>
+          <p style={{fontSize:14,color:'var(--text-muted)',marginTop:8}}>Scans all pages for broken links, missing frontmatter, orphans, near-duplicates, and stale content. Fixes issues inline.</p>
+        </Expandable>
+        <Expandable title="Export the wiki">
+          <CodeBlock label="Claude Code">/wiki-view export html</CodeBlock>
+          <p style={{fontSize:14,color:'var(--text-muted)',marginTop:8}}>Exports the wiki as a self-contained HTML file with sidebar navigation, search, and pagination. Also supports <code>md</code> and <code>json</code>.</p>
+        </Expandable>
+        <Expandable title="Create a custom page type">
+          <p style={{fontSize:14,color:'var(--text-muted)',marginTop:4}}>Place a template file in <code>.wiki/templates/</code>:</p>
+          <CodeBlock label=".wiki/templates/meeting-notes.md">{`---
+title: "{{title}}"
+type: meeting-notes
+confidence: medium
+attendees: []
+action_items: []
+date: "{{date}}"
+created: "{{created}}"
+updated: "{{updated}}"
+---
+
+# {{title}}
+
+## Attendees
+
+## Agenda
+
+## Discussion
+
+## Action Items
+
+## Decisions Made`}</CodeBlock>
+          <p style={{fontSize:14,color:'var(--text-muted)',marginTop:8}}>When creating a page with <code>type: meeting-notes</code>, the wiki-writer agent uses this template. Placeholders (<code>{'{{title}}'}</code>, <code>{'{{date}}'}</code>, etc.) are replaced automatically.</p>
+        </Expandable>
+      </section>
+
+      {/* ARCHITECTURE */}
+      <section id="architecture">
+        <h1 className="section-title">System Architecture</h1>
+        <p className="section-subtitle">Five-layer architecture: User → Agents → Utilities → Servers → Data, with external service integrations.</p>
+        <ArchDiagram />
+        <h3 style={{marginTop:24,marginBottom:12}}>Layer Breakdown</h3>
+        <Expandable title="User Layer" defaultOpen={true}>
+          <p style={{fontSize:14,color:'var(--text-muted)'}}>Users interact through five entry points. <strong>Claude Code</strong> is the primary interface where skills are invoked as slash commands and agents activate automatically. The <strong>Web UI</strong> at <code>localhost:8420</code> provides a visual browsable experience (only runs when invoked). <strong>MCP Clients</strong> can call wiki tools programmatically via the FastMCP server. <strong>Obsidian</strong> can open the <code>.wiki/</code> directory as a vault. The <strong>CLI</strong> allows direct script invocation.</p>
+        </Expandable>
+        <Expandable title="Agent Layer — 9 Agents">
+          <p style={{fontSize:14,color:'var(--text-muted)'}}>Agents are Claude subprocesses defined as markdown prompts in <code>agents/</code>. They activate automatically based on context. The wiki-writer and wiki-reader handle CRUD operations. The search-orchestrator fans out research to search-channel subagents. The research-loop runs iterative deep-dives. The fact-checker and citation-explorer handle quality assurance. The wiki-auditor performs health maintenance. The research-processor deduplicates and condenses parallel results.</p>
+        </Expandable>
+        <Expandable title="Utilities Layer — 18 CLI Scripts">
+          <p style={{fontSize:14,color:'var(--text-muted)'}}>The <code>bin/</code> directory contains Python scripts that handle deterministic operations without requiring LLM calls. These cover search (full-text TF-IDF, academic APIs, code registries), data management (backlinks, cache, embeddings), quality (claims, provenance), utilities (daily notes, diffs, export, flashcards), and infrastructure (structured logging, custom exceptions, circuit breakers). Agents call these scripts as tools during execution.</p>
+        </Expandable>
+        <Expandable title="Server Layer — MCP + FastAPI">
+          <p style={{fontSize:14,color:'var(--text-muted)'}}>Two servers. The <strong>MCP Server</strong> (<code>mcp/wiki-mcp-server.py</code>) exposes 9 wiki tools via the <a href="https://modelcontextprotocol.io/specification/2025-11-25" target="_blank" rel="noopener">Model Context Protocol</a>, allowing any MCP-compatible client to search, read, write, and query the wiki. The <strong>FastAPI Web Server</strong> (<code>skills/serve/scripts/server.py</code>) powers the web UI — it only starts when <code>/wiki-serve</code> is invoked or launched manually via CLI.</p>
+        </Expandable>
+        <Expandable title="Data Layer — .wiki/">
+          <p style={{fontSize:14,color:'var(--text-muted)'}}>All wiki data lives in <code>.wiki/</code> in the current working directory. Location can be overridden by the user. Markdown files in <code>pages/</code> are the source of truth. <code>templates/</code> holds custom page type templates. <code>cache/</code> holds SQLite databases for search indexes, vector embeddings, backlinks, flashcards, and provenance. <code>raw/</code> stores immutable source materials. Three manifest files (<code>index.md</code>, <code>log.md</code>, <code>overview.md</code>) provide system-wide views.</p>
+        </Expandable>
+      </section>
+
+      {/* DATA MODEL */}
+      <section id="data-model">
+        <h1 className="section-title">Data Model</h1>
+        <p className="section-subtitle">How wiki data is structured, stored, and interconnected.</p>
+        <h3 style={{marginTop:12,marginBottom:12}}>Page Frontmatter Schema</h3>
+        <CodeBlock label="yaml">{`---
+title: "Transformer Architecture"
+type: concept
+confidence: high
+sources:
+  - https://arxiv.org/abs/1706.03762
+  - https://jalammar.github.io/illustrated-transformer/
+tags: [ml, nlp, attention, deep-learning]
+related: [attention-mechanism, bert, gpt-architecture]
+created: 2026-03-15
+updated: 2026-04-08
+---`}</CodeBlock>
+        <h3 style={{marginTop:24,marginBottom:12}}>Confidence Tiers</h3>
+        <div className="table-wrap"><table><thead><tr><th>Level</th><th>Criteria</th></tr></thead><tbody>
+          <tr><td><Badge color="green">high</Badge></td><td>3+ corroborating independent sources</td></tr>
+          <tr><td><Badge color="amber">medium</Badge></td><td>2+ independent sources</td></tr>
+          <tr><td><Badge color="red">low</Badge></td><td>Single source or speculation</td></tr>
+        </tbody></table></div>
+        <h3 style={{marginTop:24,marginBottom:12}}>Page Types</h3>
+        <div className="table-wrap"><table><thead><tr><th>Type</th><th>Description</th></tr></thead><tbody>
+          {[["concept","Standard knowledge article"],["idea","Problem/solution evaluation"],["brainstorming","Freeform ideas list"],["status","Metrics, action items, blockers"],["rules","Numbered rules/policies"],["config","Key-value settings"],["skill","Command/tool documentation"],["memory","Persistent facts"],["reference","External resource links"],["custom","User-defined via .wiki/templates/"]].map(([t,d])=>
+            <tr key={t}><td><code>{t}</code></td><td>{d}</td></tr>)}
+        </tbody></table></div>
+        <h3 style={{marginTop:24,marginBottom:12}}>Wiki Links & Transclusion</h3>
+        <div className="table-wrap"><table><thead><tr><th>Syntax</th><th>Description</th></tr></thead><tbody>
+          <tr><td><code>[[slug]]</code></td><td>Link to a wiki page</td></tr>
+          <tr><td><code>[[slug#heading]]</code></td><td>Link to a specific section</td></tr>
+          <tr><td><code>![[slug#section]]</code></td><td>Transclude (embed) a section inline</td></tr>
+        </tbody></table></div>
+        <h3 style={{marginTop:24,marginBottom:12}}>Directory Structure</h3>
+        <CodeBlock label=".wiki/">{`.wiki/
+  pages/          Markdown files with YAML frontmatter (source of truth)
+  templates/      Custom page type templates
+  index.md        Auto-generated page catalog
+  log.md          Append-only activity log
+  overview.md     Current understanding synthesis
+  cache/          SQLite databases (search, backlinks, flashcards, provenance)
+  raw/            Immutable source materials (web, papers, code, transcripts)`}</CodeBlock>
+      </section>
+
+      {/* MCP SERVER */}
+      <section id="mcp">
+        <h1 className="section-title">MCP Server</h1>
+        <p className="section-subtitle">Exposes wiki operations as tools via the <a href="https://modelcontextprotocol.io/specification/2025-11-25" target="_blank" rel="noopener">Model Context Protocol</a>.</p>
+        <h3 style={{marginTop:12,marginBottom:12}}>Configuration</h3>
+        <CodeBlock label="plugin.json">{`"mcpServers": {
+  "wiki-mcp": {
+    "command": "python3",
+    "args": ["\${PLUGIN_ROOT}/mcp/wiki-mcp-server.py"]
+  }
+}`}</CodeBlock>
+        <h3 style={{marginTop:24,marginBottom:12}}>Tools (9)</h3>
+        <div className="table-wrap"><table><thead><tr><th>Tool</th><th>Arguments</th><th>Description</th></tr></thead><tbody>
+          {MCP_TOOLS.map(t => <tr key={t.name}><td><code>{t.name}</code></td><td style={{fontFamily:'IBM Plex Mono',fontSize:12,color:'var(--text-muted)'}}>{t.args}</td><td>{t.desc}</td></tr>)}
+        </tbody></table></div>
+        <h3 style={{marginTop:24,marginBottom:12}}>Query Examples</h3>
+        <CodeBlock label="wiki_query">{`SELECT title, confidence, updated FROM pages
+  WHERE type = "concept" AND confidence = "high"
+  SORT updated DESC
+
+COUNT pages WHERE tags CONTAINS "ml"
+
+LIST sources FROM "transformer-architecture"`}</CodeBlock>
+      </section>
+
+      {/* SKILLS */}
+      <section id="skills">
+        <h1 className="section-title">Skills (Commands)</h1>
+        <p className="section-subtitle">6 slash commands. Primary interface to LLM-Wiki.</p>
+        <div className="tabs">{SKILLS.map((s,i) => <div key={s.cmd} className={`tab ${skillTab===i?'active':''}`} onClick={()=>setSkillTab(i)}>{s.cmd}</div>)}</div>
+        {(() => { const s = SKILLS[skillTab]; return <div className="card" style={{borderLeft:`4px solid ${s.color}`}}>
+          <div className="card-header"><div><div className="card-title" style={{color:s.color}}>{s.cmd} {s.args && <span style={{fontWeight:400,color:'var(--text-muted)',fontSize:14}}>{s.args}</span>}</div>
+          <div style={{fontSize:13,color:'var(--text-muted)',marginTop:2}}>{s.purpose}</div></div></div>
+          <h4 style={{fontSize:14,fontFamily:'IBM Plex Sans',fontWeight:600,marginBottom:8,marginTop:8}}>Description</h4>
+          <p className="card-desc">{s.details}</p>
+          <h4 style={{fontSize:14,fontFamily:'IBM Plex Sans',fontWeight:600,marginBottom:8,marginTop:16}}>Usage Examples</h4>
+          {s.examples.map((e,i) => <CodeBlock key={i}>{e}</CodeBlock>)}
+          <h4 style={{fontSize:14,fontFamily:'IBM Plex Sans',fontWeight:600,marginBottom:8,marginTop:16}}>Processing Flow</h4>
+          <FlowDiagram steps={s.flow}/>
+        </div>; })()}
+      </section>
+
+      {/* AGENTS */}
+      <section id="agents">
+        <h1 className="section-title">Agents</h1>
+        <p className="section-subtitle">9 autonomous agents that activate automatically based on conversation context. Defined as markdown prompts in <code>agents/</code>.</p>
+        {AGENTS.map(a => <div key={a.name} className="card" style={{borderLeft:`4px solid ${a.color}`}}>
+          <div className="card-header">
+            <div className="card-icon" style={{background:a.color+'18',color:a.color,fontSize:14,fontWeight:700}}>{a.name.split('-').map(w=>w[0]).join('').toUpperCase()}</div>
+            <div><div className="card-title">{a.name}</div><div style={{fontSize:11,color:'var(--text-muted)',marginTop:2}}>Trigger: {a.trigger}</div></div>
+          </div>
+          <div className="card-desc">{a.desc}</div>
+        </div>)}
+        <h3 style={{marginTop:24,marginBottom:12}}>Agent Chain: Research Deep-Dive</h3>
+        <div className="diagram">
+          <svg width="720" height="170" viewBox="0 0 720 170" style={{fontFamily:'IBM Plex Sans,sans-serif'}}>
+            {[["research-loop",30,"Iterate"],["search-orch.",170,"Fan out"],["search-channel",310,"Fetch"],["research-proc.",450,"Merge"],["wiki-writer",590,"Save"]].map(([label,x,sub],i) => (
+              <React.Fragment key={i}>
+                {i>0 && <line x1={x-30} y1="55" x2={x} y2="55" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arr3)"/>}
+                <rect x={x} y="30" width="120" height="48" rx="6" fill="#eff6ff" stroke="#93c5fd" strokeWidth="1.5"/>
+                <text x={x+60} y="50" textAnchor="middle" fontSize="10" fontWeight="600" fill="#1e40af">{label}</text>
+                <text x={x+60} y="67" textAnchor="middle" fontSize="9" fill="#3b82f6">{sub}</text>
+              </React.Fragment>))}
+            <line x1="650" y1="78" x2="650" y2="105" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arr3)"/>
+            <rect x="590" y="105" width="120" height="36" rx="6" fill="#fef2f2" stroke="#fecaca" strokeWidth="1.5"/>
+            <text x="650" y="123" textAnchor="middle" fontSize="10" fontWeight="600" fill="#dc2626">fact-checker</text>
+            <text x="650" y="135" textAnchor="middle" fontSize="9" fill="#ef4444">Verify claims</text>
+            <line x1="370" y1="78" x2="370" y2="105" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arr3)"/>
+            <rect x="310" y="105" width="120" height="36" rx="6" fill="#ecfeff" stroke="#a5f3fc" strokeWidth="1.5"/>
+            <text x="370" y="123" textAnchor="middle" fontSize="10" fontWeight="600" fill="#0891b2">citation-explorer</text>
+            <text x="370" y="135" textAnchor="middle" fontSize="9" fill="#06b6d4">Snowball refs</text>
+            <defs><marker id="arr3" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#a8a29e"/></marker></defs>
+          </svg>
+        </div>
+      </section>
+
+      {/* WEB UI */}
+      <section id="webui">
+        <h1 className="section-title">Web UI</h1>
+        <p className="section-subtitle">Wikipedia-style browsable website launched via <code>/wiki-serve</code> on <code>localhost:8420</code>. Only runs when explicitly invoked.</p>
+        <Callout type="info">The web server does not start automatically. Invoke <code>/wiki-serve</code> or launch manually: <code>python skills/serve/scripts/server.py --wiki-dir .wiki/ --port 8420</code></Callout>
+        <h3 style={{marginBottom:12,marginTop:16}}>Pages & Features</h3>
+        <div className="grid-2">
+          {[{title:"Home",desc:"Search, stats, recent pages, active research tasks."},{title:"Wiki Page",desc:"Article view with TOC, metadata, sources, related pages, backlinks, red-link research buttons."},{title:"Knowledge Graph",desc:"Interactive Cytoscape.js visualization with force-directed layout, filtering, clustering, and legend."},{title:"Canvas View",desc:"Spatial whiteboard for arranging wiki pages visually."},{title:"Split-Pane Editor",desc:"Markdown editor with live preview, formatting toolbar, and AI assist presets."},{title:"Search",desc:"Full-text search with pagination. Option to research missing topics."},{title:"Spaced Repetition",desc:"FSRS-based flashcard review. Cards from wiki content: questions, definitions, takeaways. 4-button rating."},{title:"Gap Analysis",desc:"Missing pages (red links), depth gaps, stale content, structural holes."},{title:"Research Dashboard",desc:"Task queue with priority, SSE progress streaming, cancel/retry."},{title:"Chat Sidebar",desc:"WebSocket chat with RAG-augmented Q&A. Streams cited answers from wiki context."}
+          ].map(f => <div key={f.title} className="card"><strong>{f.title}</strong><p className="card-desc" style={{marginTop:4}}>{f.desc}</p></div>)}
+        </div>
+        <h3 style={{marginTop:24,marginBottom:12}}>Themes</h3>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:12}}>
+          {[{name:"Light",bg:"#fff",fg:"#1c1917",accent:"#0f766e"},{name:"Dark",bg:"#1e1e1e",fg:"#d4d4d4",accent:"#4ec9b0"},{name:"Terminal",bg:"#0a0a0a",fg:"#00ff00",accent:"#00ff00"},{name:"Wikipedia",bg:"#f8f9fa",fg:"#202122",accent:"#0645ad"}].map(t =>
+            <div key={t.name} style={{background:t.bg,color:t.fg,border:'1px solid var(--border)',borderRadius:'var(--radius)',padding:'12px 16px',textAlign:'center'}}>
+              <div style={{fontWeight:600,fontSize:13}}>{t.name}</div>
+              <div style={{width:24,height:4,background:t.accent,borderRadius:2,margin:'6px auto 0'}}/>
+            </div>)}
+        </div>
+        <h3 style={{marginTop:24,marginBottom:12}}>Live Research Flow</h3>
+        <FlowDiagram steps={["Click red link","Queue research task","Worker spawns Claude","SSE streams progress","Page created","Redirect to new page"]}/>
+      </section>
+
+      {/* CLI UTILITIES */}
+      <section id="cli">
+        <h1 className="section-title">CLI Utilities</h1>
+        <p className="section-subtitle">24 Python scripts in <code>bin/</code> providing deterministic operations.</p>
+        <div className="search-box"><span style={{color:'var(--text-light)'}}>🔍</span>
+          <input placeholder="Filter utilities..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}/></div>
+        <div className="table-wrap"><table><thead><tr><th>Script</th><th>Description</th></tr></thead><tbody>
+          {CLI_UTILS.filter(u => !searchTerm || u.name.includes(searchTerm.toLowerCase()) || u.desc.toLowerCase().includes(searchTerm.toLowerCase())).map(u =>
+            <tr key={u.name}><td><code>{u.name}</code></td><td style={{fontSize:13}}>{u.desc}</td></tr>)}
+        </tbody></table></div>
+      </section>
+
+      {/* SEARCH */}
+      <section id="search">
+        <h1 className="section-title">Search & Retrieval</h1>
+        <p className="section-subtitle">TF-IDF full-text search with content-aware scoring and snippet extraction.</p>
+        <SearchPipelineDiagram />
+        <h3 style={{marginTop:16,marginBottom:12}}>TF-IDF Full-Text Search</h3>
+        <p style={{fontSize:14,color:'var(--text-muted)',marginBottom:12}}>Implemented in <code>search-fulltext.py</code>. Builds an in-memory TF-IDF index across all <code>.md</code> files. Stop-word filtering, content-aware score boosts (title match: +0.5, first paragraph match: +0.3 per term), and best-match snippet extraction. Pure Python standard library — no external dependencies.</p>
+        <h3 style={{marginTop:16,marginBottom:12}}>Caching Architecture</h3>
+        <div className="table-wrap"><table><thead><tr><th>Layer</th><th>Contents</th><th>TTL</th></tr></thead><tbody>
+          <tr><td>L1 — Search</td><td>Per-channel results</td><td>web:7d, docs:7d</td></tr>
+          <tr><td>L2 — Merged</td><td>Ranked search output</td><td>3 days</td></tr>
+        </tbody></table></div>
+      </section>
+
+      {/* RESEARCH */}
+      <section id="research">
+        <h1 className="section-title">Research Engine</h1>
+        <p className="section-subtitle">Web search with autonomous iteration and fact-checking.</p>
+        <h3 style={{marginBottom:12}}>Search Channels</h3>
+        <div className="table-wrap"><table><thead><tr><th>Channel</th><th>Sources</th><th>Cache TTL</th><th>Status</th></tr></thead><tbody>
+          <tr><td><Badge color="blue">Web</Badge></td><td>Claude Code WebSearch → Jina Reader / Trafilatura</td><td>7 days</td><td><Badge color="green">built-in</Badge></td></tr>
+          <tr><td><Badge color="teal">Docs</Badge></td><td>Context7 MCP (fallback: WebSearch + site filters)</td><td>7 days</td><td><Badge color="amber">optional MCP</Badge></td></tr>
+        </tbody></table></div>
+        <Callout type="warn">The <strong>Docs</strong> channel uses the <strong>Context7 MCP server</strong> if installed. If Context7 is not available, it falls back to WebSearch with site-specific filters. Context7 requires separate installation.</Callout>
+        <h3 style={{marginTop:24,marginBottom:12}}>Credibility Ranking</h3>
+        <div className="table-wrap"><table><thead><tr><th>Tier</th><th>Source Types</th><th>Weight</th></tr></thead><tbody>
+          <tr><td><Badge color="green">Tier 1</Badge></td><td>Peer-reviewed journals, official documentation, government sources</td><td>1.0</td></tr>
+          <tr><td><Badge color="amber">Tier 2</Badge></td><td>Reputable blogs, conference papers, well-known repos</td><td>0.7</td></tr>
+          <tr><td><Badge color="red">Tier 3</Badge></td><td>Forums, social media, unverified personal sites</td><td>0.4</td></tr>
+        </tbody></table></div>
+        <h3 style={{marginTop:24,marginBottom:12}}>Deduplication Pipeline</h3>
+        <FlowDiagram steps={["Exact URL match","DOI match","Title similarity >85%","Content hash","Rank & output top 10–20"]}/>
+      </section>
+
+      {/* QUALITY */}
+      <section id="quality">
+        <h1 className="section-title">Quality & Provenance</h1>
+        <p className="section-subtitle">Fact-checking, claim tracking, and W3C PROV-inspired provenance chains.</p>
+        <h3 style={{marginBottom:12}}>Fact-Checking Pipeline</h3>
+        <FlowDiagram steps={["Read target page","Extract claims","Classify type","WebSearch verify","Assign status","Update page"]}/>
+        <div className="table-wrap" style={{marginTop:12}}><table><thead><tr><th>Verification Status</th><th>Meaning</th></tr></thead><tbody>
+          <tr><td><Badge color="green">verified</Badge></td><td>2+ independent sources confirm the claim</td></tr>
+          <tr><td><Badge color="gray">unverified</Badge></td><td>Unable to find confirming or denying sources</td></tr>
+          <tr><td><Badge color="amber">disputed</Badge></td><td>Sources disagree — both views noted</td></tr>
+          <tr><td><Badge color="red">outdated</Badge></td><td>Superseded by newer information</td></tr>
+        </tbody></table></div>
+        <h3 style={{marginTop:24,marginBottom:12}}>Provenance Tracking</h3>
+        <p style={{fontSize:14,color:'var(--text-muted)',marginBottom:8}}>Implemented in <code>provenance.py</code> following the <a href="https://www.w3.org/TR/prov-overview/" target="_blank" rel="noopener">W3C PROV</a> model. Every fact traces from its wiki page through the activity that created it to the original source material.</p>
+        <h3 style={{marginTop:24,marginBottom:12}}>Structured Logging</h3>
+        <p style={{fontSize:14,color:'var(--text-muted)',marginBottom:8}}>All bin/ scripts and server components use <code>wiki_logging.py</code> for structured logging. Configurable via environment variables:</p>
+        <div className="table-wrap"><table><thead><tr><th>Variable</th><th>Values</th><th>Default</th></tr></thead><tbody>
+          <tr><td><code>WIKI_LOG_LEVEL</code></td><td>DEBUG, INFO, WARNING, ERROR</td><td>INFO</td></tr>
+          <tr><td><code>WIKI_LOG_FORMAT</code></td><td>text (colored) or json (structured)</td><td>text</td></tr>
+          <tr><td><code>WIKI_LOG_FILE</code></td><td>File path for log output</td><td>(none)</td></tr>
+        </tbody></table></div>
+        <p style={{fontSize:14,color:'var(--text-muted)',marginTop:8}}>Custom exception hierarchy in <code>exceptions.py</code>: <code>WikiError</code> base class with specific types (<code>FetchError</code>, <code>CacheError</code>, <code>SearchError</code>, <code>PageNotFoundError</code>, <code>CircuitOpenError</code>, <code>RateLimitError</code>, etc.).</p>
+        <h3 style={{marginTop:24,marginBottom:12}}>Circuit Breaker</h3>
+        <p style={{fontSize:14,color:'var(--text-muted)'}}>External API calls are protected by <code>circuit_breaker.py</code>: <strong>closed</strong> (normal) → <strong>open</strong> (after 5 failures, blocks calls for 300s) → <strong>half-open</strong> (test calls, 3 successes to recover). Prevents cascading failures when upstream APIs are down.</p>
+      </section>
+
+      {/* DEPENDENCIES */}
+      <section id="deps">
+        <h1 className="section-title">Dependencies</h1>
+        <p className="section-subtitle">All required, optional, and external dependencies. Install status and availability for each component.</p>
+        <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
+          {["all","required","optional","external","builtin"].map(f => <div key={f} className={`tab ${depFilter===f?'active':''}`}
+            style={{border:'1px solid var(--border)',borderRadius:99,padding:'4px 14px',cursor:'pointer',fontSize:12,fontWeight:500,textTransform:'capitalize'}}
+            onClick={()=>setDepFilter(f)}>{f === "all" ? `All (${EXTERNAL_DEPS.length})` : f}</div>)}
+        </div>
+        {filteredDeps.map(d => <div key={d.name} className="dep-card">
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+            <span className="dep-name">{d.name}</span>
+            <Badge color={d.type==='required'?'green':d.type==='optional'?'amber':d.type==='builtin'?'blue':'gray'}>{d.type}</Badge>
+            <span style={{fontSize:11,color:'var(--text-light)'}}>{d.cat}</span>
+          </div>
+          <div style={{fontSize:13,color:'var(--text-muted)'}}>{d.desc}</div>
+        </div>)}
+      </section>
+
+      {/* SOURCES */}
+      <section style={{borderTop:'1px solid var(--border)',paddingTop:24}}>
+        <h3 style={{marginBottom:12}}>Sources</h3>
+        <div style={{fontSize:13,color:'var(--text-muted)',lineHeight:2}}>
+          <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f" target="_blank" rel="noopener">Andrej Karpathy — LLM Wiki Gist</a><br/>
+          <a href="https://code.claude.com/docs/en/plugins" target="_blank" rel="noopener">Claude Code Plugin Documentation</a><br/>
+          <a href="https://modelcontextprotocol.io/specification/2025-11-25" target="_blank" rel="noopener">Model Context Protocol Specification</a><br/>
+          <a href="https://github.com/open-spaced-repetition/free-spaced-repetition-scheduler" target="_blank" rel="noopener">FSRS — Free Spaced Repetition Scheduler</a><br/>
+          <a href="https://www.w3.org/TR/prov-overview/" target="_blank" rel="noopener">W3C PROV — Provenance Data Model</a><br/>
+          <a href="https://github.com/Oshayr/llm-wiki" target="_blank" rel="noopener">LLM-Wiki GitHub Repository</a>
+        </div>
+      </section>
+    </main>
+  </>;
+}
+ReactDOM.render(<App/>, document.getElementById('root'));
+</script>
+</body>
+</html>

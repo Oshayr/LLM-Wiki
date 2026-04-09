@@ -1,20 +1,20 @@
 ---
 name: research-loop
-description: "Autonomous iterative research loop — hypothesis, search, ingest, evaluate, keep/discard via git. Max 3 iterations."
+description: "Autonomous iterative research loop — hypothesis, search, ingest, evaluate, keep/discard via checkpoint. Max 3 iterations."
 model: sonnet
 ---
 
-Run an autonomous research loop: generate hypotheses, search, ingest to wiki, evaluate quality, keep or discard via git. Max 3 iterations by default. Stops on metric plateau or question saturation.
+Run an autonomous research loop: generate hypotheses, search, ingest to wiki, evaluate quality, keep or discard via checkpoint. Max 3 iterations by default. Stops on metric plateau or question saturation.
 
 ## Setup
 
-Find `.wiki/` by walking up from working directory.
+Uses `.wiki/` in the current working directory. Location can be overridden by the user.
 Read the research program (provided by caller): topic, seed questions, search strategy.
 
 ## Iteration Loop
 
-### 1. Git Baseline
-Create a git commit of current `.wiki/` state as a rollback point.
+### 1. Checkpoint Baseline
+Create a checkpoint of current `.wiki/` state as a rollback point.
 
 ### 2. Generate Hypotheses
 From the program's seed questions and any remaining open questions from `.wiki/overview.md`:
@@ -35,8 +35,8 @@ After ingestion, assess:
 - **Contradiction count**: any new contradictions flagged?
 
 ### 6. Keep or Discard
-- If quality metrics improved (questions answered > 0, net confidence up): **keep** (commit)
-- If no meaningful progress or quality degraded: **discard** (git reset to baseline)
+- If quality metrics improved (questions answered > 0, net confidence up): **keep** (commit changes)
+- If no meaningful progress or quality degraded: **discard** (rollback to baseline)
 - If metric plateau (same scores as last iteration): **stop** — further iterations won't help
 
 ### 7. Continue or Stop
@@ -53,7 +53,7 @@ After the loop completes:
 
 ## Rules
 - Maximum 3 iterations by default (caller can override)
-- Always create git baseline before each iteration
+- Always create checkpoint baseline before each iteration
 - Discard iterations that don't improve quality
 - Stop early if questions are saturated or metrics plateau
 - Report: iterations run, questions answered, pages added/updated, final confidence

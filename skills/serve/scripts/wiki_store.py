@@ -161,8 +161,8 @@ class WikiStore:
             cursor.execute(
                 "ALTER TABLE links ADD COLUMN relationship TEXT DEFAULT 'reference'"
             )
-        except Exception:
-            pass  # Column already exists
+        except Exception as e:
+            logger.debug(f"relationship column migration: {e}")  # Column already exists
 
         # FTS5 virtual table for full-text search
         cursor.execute("""
@@ -329,7 +329,7 @@ class WikiStore:
             return frontmatter, body
 
         except Exception as e:
-            logger.warning(f"Error parsing frontmatter: {e}")
+            logger.warning(f"Error parsing frontmatter: {e}", exc_info=True)
             return {}, content
 
     def _render_html(self, markdown_text: str) -> str:
@@ -339,7 +339,7 @@ class WikiStore:
             html = md.render(markdown_text)
             return html
         except Exception as e:
-            logger.error(f"Error rendering markdown: {e}")
+            logger.error(f"Error rendering markdown: {e}", exc_info=True)
             return f"<p>{markdown_text}</p>"
 
     def _extract_summary(self, markdown_text: str) -> str:
@@ -469,8 +469,8 @@ class WikiStore:
             # Remove annotations
             try:
                 cursor.execute("DELETE FROM annotations WHERE slug = ?", (slug,))
-            except Exception:
-                pass  # annotations table may not exist
+            except Exception as e:
+                logger.debug(f"Error deleting annotations for {slug}: {e}")  # annotations table may not exist
 
             # Remove from pages table
             cursor.execute("DELETE FROM pages WHERE slug = ?", (slug,))
@@ -521,7 +521,7 @@ class WikiStore:
                     )
                 return results
             except Exception as e:
-                logger.error(f"Search error: {e}")
+                logger.error(f"Search error: {e}", exc_info=True)
                 return []
 
     def get_all_pages(self) -> list[dict[str, Any]]:
@@ -850,7 +850,7 @@ class WikiStore:
             return True
 
         except Exception as e:
-            logger.error(f"✗ Smoke test failed: {e}")
+            logger.error(f"✗ Smoke test failed: {e}", exc_info=True)
             raise
 
     def shutdown(self):

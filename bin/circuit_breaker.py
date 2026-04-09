@@ -18,6 +18,11 @@ import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from wiki_logging import get_logger
+from exceptions import CircuitOpenError
+
+logger = get_logger(__name__)
+
 
 # Failure threshold to trip the breaker
 FAILURE_THRESHOLD = 5
@@ -68,6 +73,7 @@ class CircuitBreaker:
 
         if not row:
             conn.close()
+            logger.debug("Endpoint not tracked yet, defaulting to closed", extra={"endpoint": endpoint})
             return {"allowed": True, "state": "closed", "endpoint": endpoint}
 
         state = row[1]
@@ -76,6 +82,7 @@ class CircuitBreaker:
 
         if state == "closed":
             conn.close()
+            logger.debug("Circuit check: closed", extra={"endpoint": endpoint})
             return {"allowed": True, "state": "closed", "endpoint": endpoint}
 
         if state == "open":
@@ -92,21 +99,25 @@ class CircuitBreaker:
                         )
                         conn.commit()
                         conn.close()
+                        logger.info("Circuit state transition: open -> half-open", extra={"endpoint": endpoint, "cooldown_elapsed_seconds": elapsed})
                         return {"allowed": True, "state": "half-open", "endpoint": endpoint}
                 except ValueError:
                     pass
 
             conn.close()
+            cooldown_remaining = max(0, COOLDOWN_SECONDS - elapsed) if last_failure else COOLDOWN_SECONDS
+            logger.debug("Circuit check: open (cooldown active)", extra={"endpoint": endpoint, "failures": failure_count, "cooldown_remaining_seconds": cooldown_remaining})
             return {
                 "allowed": False,
                 "state": "open",
                 "endpoint": endpoint,
                 "failures": failure_count,
-                "cooldown_remaining": max(0, COOLDOWN_SECONDS - elapsed) if last_failure else COOLDOWN_SECONDS,
+                "cooldown_remaining": cooldown_remaining,
             }
 
         if state == "half-open":
             conn.close()
+            logger.debug("Circuit check: half-open", extra={"endpoint": endpoint})
             return {"allowed": True, "state": "half-open", "endpoint": endpoint}
 
         conn.close()
@@ -145,8 +156,10 @@ class CircuitBreaker:
                     "UPDATE endpoints SET state = 'closed', failure_count = 0, success_count = 0, last_state_change = ? WHERE name = ?",
                     (now, endpoint),
                 )
+                logger.info("Circuit state transition: half-open -> closed (recovered)", extra={"endpoint": endpoint, "consecutive_successes": new_success_count})
                 state = "closed"
             elif state == "half-open":
+                logger.debug("Circuit half-open: success recorded", extra={"endpoint": endpoint, "success_count": new_success_count})
                 state = "half-open"
 
         else:
@@ -163,6 +176,7 @@ class CircuitBreaker:
                     "UPDATE endpoints SET state = 'open', last_state_change = ? WHERE name = ?",
                     (now, endpoint),
                 )
+                logger.warning("Circuit state transition: closed/half-open -> open (failure threshold exceeded)", extra={"endpoint": endpoint, "failure_count": new_failure_count, "threshold": FAILURE_THRESHOLD})
                 state = "open"
             elif state == "half-open":
                 # Failed during half-open — back to open
@@ -170,7 +184,10 @@ class CircuitBreaker:
                     "UPDATE endpoints SET state = 'open', last_state_change = ? WHERE name = ?",
                     (now, endpoint),
                 )
+                logger.warning("Circuit state transition: half-open -> open (failed during probe)", extra={"endpoint": endpoint})
                 state = "open"
+            else:
+                logger.debug("Circuit failure recorded", extra={"endpoint": endpoint, "failure_count": new_failure_count})
 
         conn.commit()
         conn.close()
@@ -205,6 +222,7 @@ class CircuitBreaker:
         )
         conn.commit()
         conn.close()
+        logger.info("Circuit manually reset to closed", extra={"endpoint": endpoint})
         return {"endpoint": endpoint, "state": "closed", "reset": True}
 
 

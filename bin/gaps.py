@@ -14,10 +14,13 @@ shallow-but-referenced pages, and fast-moving content that's gone stale.
 import argparse
 import json
 import re
-import sqlite3
-import sys
 from datetime import datetime, timedelta
 from pathlib import Path
+
+from wiki_logging import get_logger
+from exceptions import WikiNotFoundError, FrontmatterError
+
+logger = get_logger(__name__)
 
 
 FAST_MOVING_KEYWORDS = {"ai", "llm", "gpt", "claude", "mcp", "agent", "api", "sdk"}
@@ -71,22 +74,15 @@ def analyze_structural(pages_dir: Path) -> list[dict]:
     if len(pages) < 4:
         return []
 
-    # Try to use embedding clusters
-    try:
-        sys.path.insert(0, str(Path(__file__).parent))
-        from embed import EmbeddingIndex
-        idx = EmbeddingIndex(pages_dir)
-        clusters = idx.cluster_pages(min(10, len(pages) // 2))
-    except Exception:
-        # Fallback: group by type
-        type_groups = {}
-        for p in pages:
-            t = p.get("type", "unknown")
-            type_groups.setdefault(t, []).append(p["slug"])
-        clusters = [
-            {"cluster_id": i, "pages": slugs}
-            for i, (_, slugs) in enumerate(type_groups.items())
-        ]
+    # Group pages by type for cluster analysis
+    type_groups = {}
+    for p in pages:
+        t = p.get("type", "unknown")
+        type_groups.setdefault(t, []).append(p["slug"])
+    clusters = [
+        {"cluster_id": i, "pages": slugs}
+        for i, (_, slugs) in enumerate(type_groups.items())
+    ]
 
     # Build link map
     all_links = {}

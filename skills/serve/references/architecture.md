@@ -81,7 +81,7 @@ Reads the existing wiki on disk. No separate database for page content — the m
 - Parse frontmatter + markdown for all pages on startup
 - Build an in-memory index: slug → {title, type, confidence, summary, links_to, linked_from}
 - Watch filesystem for changes (new/modified .md files) and update index
-- Provide search: full-text (BM25 via SQLite FTS5) + title matching
+- Provide search: TF-IDF full-text search + title matching
 - Convert `[[slug]]` wiki links to `<a href="/wiki/slug">` HTML links
 - Detect missing pages (linked-to but don't exist) for research queue seeding
 

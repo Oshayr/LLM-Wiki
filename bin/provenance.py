@@ -20,6 +20,10 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
+from wiki_logging import get_logger
+
+logger = get_logger(__name__)
+
 
 class ProvenanceDB:
     """W3C PROV-inspired provenance tracking for wiki content."""
@@ -257,6 +261,7 @@ def main():
         inputs = [s.strip() for s in args.inputs.split(",") if s.strip()]
         outputs = [s.strip() for s in args.outputs.split(",") if s.strip()]
         act_id = prov.record(args.activity_type, args.agent, inputs, outputs)
+        logger.info("Recorded provenance activity", extra={"activity_id": act_id, "type": args.activity_type, "agent": args.agent})
         print(f"Recorded activity: {act_id}")
 
     elif args.command == "trace":

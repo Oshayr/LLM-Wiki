@@ -19,6 +19,10 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+from wiki_logging import get_logger
+
+logger = get_logger(__name__)
+
 
 class ClaimsDB:
     """Manages factual claim extraction and verification tracking."""
@@ -56,6 +60,7 @@ class ClaimsDB:
         """Extract verifiable factual claims from a wiki page."""
         md_file = Path(pages_dir) / f"{slug}.md"
         if not md_file.exists():
+            logger.warning("Page not found", extra={"slug": slug})
             return [{"error": f"Page '{slug}' not found"}]
 
         content = md_file.read_text(encoding="utf-8")

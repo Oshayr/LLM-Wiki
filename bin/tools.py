@@ -13,6 +13,10 @@ import re
 import sys
 from pathlib import Path
 
+from wiki_logging import get_logger
+
+logger = get_logger(__name__)
+
 
 def cmd_dedup(args):
     """Deduplicate and rank search results deterministically.
@@ -100,6 +104,7 @@ def cmd_similar(args):
 
     slug_tokens = set(slug.replace("-", " ").replace("_", " ").lower().split())
     if not slug_tokens:
+        logger.warning("No tokens extracted from slug", extra={"slug": slug})
         print(json.dumps({"match": None, "score": 0}))
         return
 
@@ -148,7 +153,12 @@ def cmd_summarize(args):
 
     Saves tokens by pre-computing page summaries instead of sending full content to LLM.
     """
-    content = Path(args.file).read_text(encoding="utf-8", errors="replace")
+    try:
+        content = Path(args.file).read_text(encoding="utf-8", errors="replace")
+    except Exception as e:
+        logger.error("Failed to read file", extra={"file": args.file, "error": str(e)}, exc_info=True)
+        print("(failed to read file)")
+        return
 
     # Strip frontmatter
     if content.startswith("---"):

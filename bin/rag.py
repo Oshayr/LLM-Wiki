@@ -5,14 +5,64 @@ Usage:
     python3 rag.py query <pages_dir> "<question>" [--budget N] [--json]
     python3 rag.py context <pages_dir> "<question>" [--top N]
 
-Retrieves relevant wiki chunks via hybrid search, formats them as a
+Retrieves relevant wiki chunks via TF-IDF full-text search, formats them as a
 cited context block for LLM consumption. Citations use [[slug#section]] notation.
 """
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
+
+from wiki_logging import get_logger
+
+logger = get_logger(__name__)
+
+
+def _chunk_page(slug: str, content: str) -> list[dict]:
+    """Split a page into section chunks for RAG context."""
+    chunks = []
+
+    # Strip frontmatter
+    body = content
+    if content.startswith("---"):
+        parts = content.split("---", 2)
+        if len(parts) >= 3:
+            body = parts[2]
+
+    lines = body.split("\n")
+    current_section = "intro"
+    current_lines = []
+
+    for line in lines:
+        heading_match = re.match(r"^(#{1,6})\s+(.+)$", line)
+        if heading_match:
+            # Save previous chunk
+            text = "\n".join(current_lines).strip()
+            if text and len(text) > 20:
+                chunks.append({
+                    "slug": slug,
+                    "section": current_section,
+                    "text": text[:2000],
+                })
+
+            section_text = heading_match.group(2).strip()
+            current_section = re.sub(r"[^a-z0-9]+", "-", section_text.lower()).strip("-")
+            current_lines = [line]
+        else:
+            current_lines.append(line)
+
+    # Save final chunk
+    text = "\n".join(current_lines).strip()
+    if text and len(text) > 20:
+        chunks.append({
+            "slug": slug,
+            "section": current_section,
+            "text": text[:2000],
+        })
+
+    return chunks
 
 
 def build_rag_context(
@@ -25,78 +75,62 @@ def build_rag_context(
     pages_dir = Path(pages_dir)
 
     sys.path.insert(0, str(Path(__file__).parent))
-    from embed import EmbeddingIndex
 
-    idx = EmbeddingIndex(pages_dir)
-    results = idx.hybrid_search(question, pages_dir=pages_dir, top=top_k * 2)
+    # Use TF-IDF full-text search
+    spec = __import__("importlib").util.spec_from_file_location(
+        "search_fulltext",
+        str(Path(__file__).parent / "search-fulltext.py"),
+    )
+    mod = __import__("importlib").util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    searcher = mod.WikiSearcher(str(pages_dir))
+    results = searcher.search(question, top=top_k * 2)
 
-    # Deduplicate by slug (keep best score per page)
-    seen = set()
-    unique_results = []
-    for r in results:
-        slug = r["slug"]
-        if slug not in seen:
-            seen.add(slug)
-            unique_results.append(r)
-
-    # Load full chunk text for top results
-    import sqlite3
-    conn = sqlite3.connect(idx.db_path)
-    cursor = conn.cursor()
-
+    # Build chunks from search results
     chunks = []
     total_chars = 0
     char_budget = token_budget * 4  # Rough chars-to-tokens
 
-    for r in unique_results[:top_k]:
+    seen = set()
+    for r in results:
         slug = r["slug"]
-        section = r.get("section", "")
+        if slug in seen:
+            continue
+        seen.add(slug)
 
-        # Get full chunk text
-        if section:
-            cursor.execute(
-                "SELECT text, heading_hierarchy FROM chunks WHERE slug = ? AND section = ?",
-                (slug, section),
-            )
-        else:
-            cursor.execute(
-                "SELECT text, heading_hierarchy FROM chunks WHERE slug = ? LIMIT 1",
-                (slug,),
-            )
-
-        row = cursor.fetchone()
-        if not row:
+        # Read the page and chunk it
+        page_path = pages_dir / f"{slug}.md"
+        if not page_path.exists():
             continue
 
-        text = row[0]
-        hierarchy = row[1]
+        content = page_path.read_text(encoding="utf-8")
+        page_chunks = _chunk_page(slug, content)
 
-        if total_chars + len(text) > char_budget:
-            # Truncate to fit budget
-            remaining = char_budget - total_chars
-            if remaining > 100:
-                text = text[:remaining] + "..."
-            else:
+        for chunk in page_chunks:
+            text = chunk["text"]
+            if total_chars + len(text) > char_budget:
+                remaining = char_budget - total_chars
+                if remaining > 100:
+                    text = text[:remaining] + "..."
+                    chunk["text"] = text
+                else:
+                    break
+
+            chunk["score"] = r.get("score", 0)
+            chunks.append(chunk)
+            total_chars += len(text)
+
+            if len(chunks) >= top_k:
                 break
 
-        chunks.append({
-            "slug": slug,
-            "section": section or "intro",
-            "text": text,
-            "heading_hierarchy": hierarchy or "",
-            "score": r.get("rrf_score", r.get("semantic_score", 0)),
-        })
-        total_chars += len(text)
-
-    conn.close()
+        if len(chunks) >= top_k:
+            break
 
     # Format the prompt
     context_text = ""
     for i, chunk in enumerate(chunks, 1):
         ref = f"[[{chunk['slug']}#{chunk['section']}]]"
         context_text += f"\n--- Source {i}: {ref} ---\n"
-        if chunk["heading_hierarchy"]:
-            context_text += f"Section: {chunk['heading_hierarchy']}\n"
         context_text += chunk["text"] + "\n"
 
     formatted_prompt = f"""You are a wiki Q&A assistant. Answer the question using ONLY the provided wiki context.
@@ -125,8 +159,6 @@ If the context doesn't contain enough information, say so clearly.
 
 def verify_citations(response: str, valid_refs: set[str]) -> list[dict]:
     """Verify that citations in a response are grounded in the context."""
-    import re
-
     citations = re.findall(r"\[\[([^\]]+)\]\]", response)
     issues = []
 
@@ -166,8 +198,8 @@ def main():
 
     if args.command == "query":
         result = build_rag_context(args.pages_dir, args.question, token_budget=args.budget)
+        logger.info("RAG context built", extra={"chunks": result["chunks_used"], "tokens_est": result["total_tokens_est"]})
         if hasattr(args, "json") and args.json:
-            # Output full prompt for piping
             print(result["formatted_prompt"])
         else:
             print(json.dumps({

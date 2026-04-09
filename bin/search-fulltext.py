@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
-"""search-fulltext.py — QMD term-frequency search for wiki pages.
+"""search-fulltext.py — TF-IDF term-frequency search for wiki pages.
 
 Usage:
-    python3 wiki-qmd-search.py <pages_dir> <query> [--top N] [--json]
+    python3 search-fulltext.py <pages_dir> <query> [--top N] [--json]
 
 Builds an in-memory TF-IDF index from all .md files and returns ranked results.
-For wikis with >200 pages where reading index.md is too slow.
+Provides comprehensive full-text search across all pages.
 """
 
 import argparse
 import json
 import math
 import re
+import sys
 from collections import Counter
 from pathlib import Path
+
+from wiki_logging import get_logger
+from exceptions import SearchError
+
+logger = get_logger(__name__)
 
 
 class WikiSearcher:
@@ -150,7 +156,7 @@ class WikiSearcher:
                     all_tokens[term] += 1
 
             except Exception as e:
-                print(f"Error indexing {slug}: {e}", file=__import__("sys").stderr)
+                logger.error(f"Error indexing {slug}: {e}")
 
     def _calculate_tfidf(self, query_terms: list[str], slug: str) -> float:
         """Calculate TF-IDF score for document."""

@@ -18,15 +18,24 @@ import subprocess
 import sys
 from pathlib import Path
 
+from wiki_logging import get_logger
+from exceptions import GitError
+
+logger = get_logger(__name__)
+
 
 def _git(args: list[str], cwd: str) -> subprocess.CompletedProcess:
     """Run a git command."""
-    return subprocess.run(
-        ["git"] + args,
-        capture_output=True,
-        text=True,
-        cwd=cwd,
-    )
+    try:
+        return subprocess.run(
+            ["git"] + args,
+            capture_output=True,
+            text=True,
+            cwd=cwd,
+        )
+    except Exception as e:
+        logger.error("Git command failed", extra={"args": args, "cwd": cwd, "error": str(e)}, exc_info=True)
+        raise GitError(f"Git command failed: {e}")
 
 
 def init_repo(wiki_dir: str) -> dict:
@@ -51,6 +60,7 @@ def commit_page(wiki_dir: str, slug: str, message: str, agent: str = "user") -> 
     page_path = wiki_dir / "pages" / f"{slug}.md"
 
     if not page_path.exists():
+        logger.error("Page not found", extra={"slug": slug, "path": str(page_path)})
         return {"error": f"Page '{slug}' not found"}
 
     # Check for changes
@@ -74,12 +84,14 @@ def commit_page(wiki_dir: str, slug: str, message: str, agent: str = "user") -> 
     result = _git(["commit", "-m", commit_msg], str(wiki_dir))
 
     if result.returncode != 0:
+        logger.error("Git commit failed", extra={"slug": slug, "error": result.stderr.strip()})
         return {"error": result.stderr.strip(), "slug": slug}
 
     # Get commit hash
     hash_result = _git(["rev-parse", "--short", "HEAD"], str(wiki_dir))
     commit_hash = hash_result.stdout.strip()
 
+    logger.info("Page committed", extra={"slug": slug, "hash": commit_hash, "agent": agent})
     return {"status": "committed", "slug": slug, "hash": commit_hash, "message": message}
 
 
@@ -95,6 +107,7 @@ def undo_page(wiki_dir: str, slug: str) -> dict:
     )
 
     if not result.stdout.strip():
+        logger.warning("No commits found for page", extra={"slug": slug})
         return {"error": f"No commits found for '{slug}'"}
 
     last_commit = result.stdout.strip()
@@ -107,8 +120,10 @@ def undo_page(wiki_dir: str, slug: str) -> dict:
     result = _git(["revert", "--no-edit", last_commit], str(wiki_dir))
 
     if result.returncode != 0:
+        logger.error("Git revert failed", extra={"slug": slug, "error": result.stderr.strip()})
         return {"error": result.stderr.strip(), "slug": slug}
 
+    logger.info("Page reverted", extra={"slug": slug, "commit": last_commit[:8]})
     return {
         "status": "reverted",
         "slug": slug,
@@ -165,6 +180,7 @@ def blame_page(wiki_dir: str, slug: str) -> list[dict]:
     )
 
     if result.returncode != 0:
+        logger.error("Git blame failed", extra={"slug": slug, "error": result.stderr.strip()})
         return [{"error": "Git blame failed"}]
 
     # Parse blame output to find agents per section

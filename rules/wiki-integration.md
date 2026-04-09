@@ -50,3 +50,4 @@ The wiki at `.wiki/` is your persistent knowledge store. These rules apply to EV
 | skill | Command/tool documentation with usage examples |
 | memory | Persistent facts, relationships, key information |
 | reference | Links and pointers to external resources |
+| custom | User-defined type — structure defined in `.wiki/templates/<type-name>.md` |

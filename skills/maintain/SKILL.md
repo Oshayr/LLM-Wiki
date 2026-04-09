@@ -1,5 +1,5 @@
 ---
-name: maintain
+name: wiki-maintain
 description: "Wiki maintenance — lint broken links, merge near-duplicates, upgrade confidence, flag stale pages, gap analysis, concept synthesis. Use on: 'wiki maintenance', 'wiki cleanup', 'fix wiki', 'wiki health', 'check wiki', 'consolidate wiki'."
 ---
 
@@ -7,14 +7,15 @@ description: "Wiki maintenance — lint broken links, merge near-duplicates, upg
 
 Comprehensive wiki maintenance: lint, deduplicate, upgrade, and analyze.
 
-Find `.wiki/` by walking up from working directory. If not found, say "No wiki found."
+Uses `.wiki/` in the current working directory. Location can be overridden by the user. If not found, say "No wiki found."
 
 ## Arguments
 
-- **`/maintain`** — run full maintenance (all steps below)
-- **`/maintain lint`** — only fix broken links, missing frontmatter, orphans
-- **`/maintain dedup`** — only find and merge near-duplicate pages
-- **`/maintain gaps`** — only analyze knowledge gaps and missing coverage
+- **`/wiki-maintain`** — run full maintenance (all steps below)
+- **`/wiki-maintain lint`** — only fix broken links, missing frontmatter, orphans
+- **`/wiki-maintain dedup`** — only find and merge near-duplicate pages
+- **`/wiki-maintain gaps`** — only analyze knowledge gaps and missing coverage
+- **`/wiki-maintain fact-check`** — run `fact-checker` agent on high-confidence pages to verify claims
 
 ## Full Maintenance Steps
 
@@ -38,13 +39,14 @@ Find pages with >60% slug token overlap (Jaccard similarity on slug words split 
 Pages with 3+ independent sources in frontmatter get upgraded:
 - `low` → `medium` (if 2+ sources)
 - `medium` → `high` (if 3+ corroborating sources)
+- Run `fact-checker` agent on high-confidence pages to verify claims against external sources
 - Write the reason in log.md
 
 ### 4. Stale Detection
 
 Pages with `updated:` date >90 days old:
 - Add `stale: true` to frontmatter
-- Suggest running `/research refresh <slug>` for fast-moving topics
+- Suggest running `/wiki-research refresh <slug>` for fast-moving topics
 
 ### 5. Concept Auto-Generation
 

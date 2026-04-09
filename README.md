@@ -1,6 +1,6 @@
 # llm-wiki
 
-LLM-powered personal wiki for [Claude Code](https://claude.ai/claude-code) — an autonomous knowledge base with semantic search, multi-channel research, spaced repetition, knowledge graph visualization, and a Wikipedia-style web UI.
+LLM-powered personal wiki for [Claude Code](https://claude.ai/claude-code) — an autonomous knowledge base with full-text search, multi-channel research, spaced repetition, knowledge graph visualization, and a Wikipedia-style web UI.
 
 Inspired by [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): raw sources are immutable, the LLM maintains the wiki layer, and a schema governs behavior. Knowledge compounds over time.
 
@@ -9,15 +9,15 @@ Inspired by [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpath
 **Knowledge Management**
 - Automatic knowledge capture — saves research, ideas, decisions, and findings to the wiki
 - Smart retrieval — checks the wiki before web search, grounds answers in existing knowledge
-- Hybrid search — combines BM25 keyword matching with semantic vector similarity (Reciprocal Rank Fusion)
+- TF-IDF full-text search with title/paragraph boosts and snippet extraction
 - Block references and transclusion — `[[page#heading]]` links and `![[page#section]]` embeds
 - Backlinks panel with unlinked mention detection
+- Custom page types via `.wiki/templates/` — users can define their own page structures
 - Frontmatter query language (Dataview-like) — query your wiki like a database
 
 **Research Engine**
-- Multi-channel parallel search — web, academic (Semantic Scholar, OpenAlex, CrossRef, arXiv), code (GitHub, npm, PyPI), docs (Context7)
-- Citation snowballing — forward/backward citation graph building from seed papers
-- Autonomous research loops — iterative hypothesis-driven research with git-based rollback
+- Web search via Claude's built-in tools
+- Autonomous research loops — iterative hypothesis-driven research with checkpoint-based rollback
 - Research provenance tracking (W3C PROV-inspired) — every fact traces back to its source
 - Fact-checking pipeline — extract claims, verify against external sources, track verification status
 - Source credibility scoring with tiered ranking
@@ -32,50 +32,46 @@ Inspired by [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpath
 - Content gap analysis dashboard
 - WebSocket chat sidebar with RAG-augmented Q&A
 
+  **Server Launch:** The web server runs only when explicitly invoked via `/wiki-serve` skill or manually via CLI:
+  ```bash
+  python .claude/plugins/llm-wiki/skills/serve/scripts/server.py --wiki-dir .wiki/ --port 8420
+  ```
+
 **Maintenance**
 - Self-maintaining — lints broken links, merges duplicates, upgrades confidence, flags stale content
-- Progressive summarization and note maturity tracking (seed/growing/mature/evergreen)
+- Fact-checking pipeline integration via `/wiki-maintain fact-check`
 - Daily notes and journal workflows
 - Smart caching with adaptive TTL and stale-while-revalidate
 - Circuit breakers for external API resilience
-- Git integration with auto-commit, attribution, and undo
+- Structured logging (JSON or text) via `wiki_logging.py` with custom exception hierarchy
+- Activity logging with attribution and history tracking
 
 ## Install
 
 ```bash
-# Clone into your Claude Code plugins directory
-git clone https://github.com/Oshayr/llm-wiki .claude/plugins/llm-wiki
+# Copy into your Claude Code plugins directory
+cp -r llm-wiki .claude/plugins/
 
 # Install dependencies (web server + MCP server)
 pip install -r .claude/plugins/llm-wiki/requirements.txt
 ```
 
-No further setup required. The `.wiki/` data directory is created automatically on first use.
-
-### Optional: Semantic Search
-
-For hybrid semantic + keyword search, install the embedding dependencies:
-
-```bash
-pip install onnxruntime tokenizers numpy sqlite-vec
-```
-
-The embedding model (~23MB ONNX) downloads automatically on first use. No PyTorch required.
+The `.wiki/` data directory is created automatically on first use.
 
 ### Verify Installation
 
-After installing, restart Claude Code. The plugin provides 6 slash commands (`/write`, `/read`, `/research`, `/serve`, `/maintain`, `/view`) and 9 agents that activate automatically based on context.
+After installing, restart Claude Code. The plugin provides 6 slash commands (`/wiki-write`, `/wiki-read`, `/wiki-research`, `/wiki-serve`, `/wiki-maintain`, `/wiki-view`) and 9 agents that activate automatically based on context.
 
 ## Skills
 
 | Command | Purpose |
 |---------|---------|
-| `/write <source>` | Add content from URL, file, or text |
-| `/read <question>` | Search wiki, get cited answers |
-| `/research <topic>` | Multi-channel web research with auto-ingestion |
-| `/serve` | Start Wikipedia-style website on localhost:8420 |
-| `/maintain` | Lint, deduplicate, upgrade confidence, gap analysis |
-| `/view` | Dashboard, knowledge graph, stats, export |
+| `/wiki-write <source>` | Add content from URL, file, or text |
+| `/wiki-read <question>` | Search wiki, get cited answers |
+| `/wiki-research <topic>` | Multi-channel web research with auto-ingestion |
+| `/wiki-serve` | Start Wikipedia-style website on localhost:8420 |
+| `/wiki-maintain` | Lint, deduplicate, upgrade confidence, gap analysis |
+| `/wiki-view` | Dashboard, knowledge graph, stats, export |
 
 ## Architecture
 
@@ -83,7 +79,7 @@ After installing, restart Claude Code. The plugin provides 6 slash commands (`/w
 llm-wiki/
   .claude-plugin/       Plugin metadata (plugin.json, marketplace.json)
   agents/               9 autonomous agents (writer, reader, auditor, search, research, fact-checker)
-  bin/                  22 CLI utilities (embed, search, backlinks, mentions, daily, rag, query, ...)
+  bin/                  18 CLI utilities (search, backlinks, mentions, daily, rag, query, ...)
   mcp/                  MCP server for wiki operations (search, read, write, query, gaps)
   rules/                Workflow rules (when to read/write, quality standards)
   skills/               6 user-facing skills (write, read, research, serve, maintain, view)
@@ -95,15 +91,16 @@ llm-wiki/
 
 ## Data Model
 
-Wiki data lives in `.wiki/` at your project root (not inside the plugin):
+Wiki data lives in `.wiki/` in the current working directory. Location can be overridden by the user.
 
 ```
 .wiki/
   pages/          Markdown files with YAML frontmatter (source of truth)
+  templates/      Custom page type templates (user-defined structures)
   index.md        Auto-generated page catalog
   log.md          Append-only activity log
   overview.md     Current understanding synthesis
-  cache/          SQLite databases (search, vectors, backlinks, flashcards, provenance)
+  cache/          SQLite databases (search, backlinks, flashcards, provenance)
   raw/            Immutable source materials (web, papers, code, transcripts)
 ```
 

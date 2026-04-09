@@ -1,13 +1,13 @@
 ---
-name: write
-description: "Add or update wiki content — autonomous ingest from URL, file, or text; update existing pages with diff preview. Auto-creates .wiki/ on first use. Use when: 'save to wiki', 'remember this', 'note this', 'store this', 'add to knowledge base', 'save findings', 'save research', 'save idea', 'write to wiki', 'ingest', 'add page', 'update page'."
+name: wiki-write
+description: "Add or update wiki content — autonomous ingest from URL, file, or text; update existing pages autonomously. Auto-creates .wiki/ on first use. Use when: 'save to wiki', 'remember this', 'note this', 'store this', 'add to knowledge base', 'save findings', 'save research', 'save idea', 'write to wiki', 'ingest', 'add page', 'update page'."
 ---
 
 # Write
 
 Add or update content in the wiki. Auto-creates `.wiki/` if it doesn't exist.
 
-Find the `.wiki/` directory by walking up from working directory. If not found, create it at project root (next to `.git/` if present, otherwise CWD).
+Uses `.wiki/` in the current working directory. Location can be overridden by the user.
 
 ## Auto-Init
 
@@ -28,13 +28,13 @@ If `.wiki/` doesn't exist, create it automatically before proceeding:
 
 ## Arguments
 
-- **`/write <url>`** — fetch and ingest a web page or paper
-- **`/write <file-path>`** — ingest a local file (text, markdown, PDF)
-- **`/write "text..."`** — ingest pasted text
-- **`/write --batch <dir>`** — ingest all `.md` files in a directory
-- **`/write --update <slug>`** — update an existing page (shows diff, requires confirmation)
-- **`/write --update <slug> <url>`** — update page with content from URL
-- **`/write --refresh-stale`** — find and refresh pages >90 days old on fast-moving topics
+- **`/wiki-write <url>`** — fetch and ingest a web page or paper
+- **`/wiki-write <file-path>`** — ingest a local file (text, markdown, PDF)
+- **`/wiki-write "text..."`** — ingest pasted text
+- **`/wiki-write --batch <dir>`** — ingest all `.md` files in a directory
+- **`/wiki-write --update <slug>`** — update an existing page (autonomous)
+- **`/wiki-write --update <slug> <url>`** — update page with content from URL
+- **`/wiki-write --refresh-stale`** — find and refresh pages >90 days old on fast-moving topics
 
 ## Ingest (default — no `--update` flag)
 
@@ -53,17 +53,40 @@ Report: pages written, pages updated, confidence assigned.
 Launch the `wiki-writer` agent with `mode: update`:
 1. Reads current page
 2. Generates proposed changes
-3. **Shows diff and waits for confirmation** — updates are destructive
+3. Applies changes immediately — no confirmation pause, no diff preview
 4. Checks downstream pages for impact
 5. Runs contradiction sweep against high-confidence pages
-6. Applies changes after confirmation
-7. Updates index.md and log.md
+6. Updates index.md and log.md
 
 ## Refresh Stale (`--refresh-stale`)
 
 Finds pages where `updated` >90 days old on fast-moving topics (`ai`, `llm`, `api`, `cloud`, `mcp`).
-For each: searches for fresh sources → shows diff → waits for confirmation → updates.
+For each: searches for fresh sources → applies changes autonomously → updates.
 
 ## Batch (`--batch`)
 
 Sequentially ingest each file in the directory. Report progress.
+
+## Custom Page Types
+
+Users can define custom page types by creating template files in `.wiki/templates/`. Each template is a markdown file with YAML frontmatter that defines default fields and placeholder content.
+
+**Creating a custom page type:**
+
+1. Create a file in `.wiki/templates/<type-name>.md`
+2. Add YAML frontmatter with default fields (title, type, confidence, dates, custom fields)
+3. Add markdown body content with placeholders (e.g., `{{title}}`, `{{date}}`)
+
+**Using a custom page type:**
+
+When using `/wiki-write` with `type: custom-type-name`, the write operation will:
+- Look for `.wiki/templates/custom-type-name.md`
+- Use the template's frontmatter and body as the page skeleton
+- Replace placeholders with actual values (dates, title, etc.)
+- Proceed with normal page creation
+
+**Placeholder variables:**
+- `{{title}}` — Page title
+- `{{date}}` — Current date (YYYY-MM-DD)
+- `{{created}}` — Creation timestamp (ISO 8601)
+- `{{updated}}` — Update timestamp (ISO 8601)

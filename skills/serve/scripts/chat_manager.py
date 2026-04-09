@@ -56,8 +56,8 @@ class ChatManager:
             else:
                 self._cached_page_list = ""
                 self._cached_page_count = 0
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Error refreshing page cache: {e}")
 
     def _cap_history(self) -> None:
         """Truncate history to MAX_HISTORY most recent messages."""
@@ -128,8 +128,8 @@ class ChatManager:
                 current_count = len(self.wiki_store.get_all_pages())
                 if current_count != self._cached_page_count:
                     self._refresh_page_cache()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Error getting page count: {e}")
         if self._cached_page_list:
             lines.append(f"Wiki pages available: {self._cached_page_list}")
             lines.append("")
@@ -237,7 +237,7 @@ class ChatManager:
                 return response
 
             except Exception as e:
-                logger.error(f"Error communicating with Claude: {e}")
+                logger.error(f"Error communicating with Claude: {e}", exc_info=True)
                 # Remove user message from history since it failed
                 if self.history and self.history[-1]["role"] == "user":
                     self.history.pop()
@@ -345,7 +345,8 @@ async def chat_websocket_handler(websocket, chat_manager: ChatManager) -> None:
                     import traceback
 
                     logger.error(
-                        f"Error processing message: {type(e).__name__}: {e}\n{traceback.format_exc()}"
+                        f"Error processing message: {type(e).__name__}: {e}\n{traceback.format_exc()}",
+                        exc_info=True
                     )
                     try:
                         await websocket.send_json(
@@ -354,8 +355,8 @@ async def chat_websocket_handler(websocket, chat_manager: ChatManager) -> None:
                                 "content": f"Error: {type(e).__name__}: {str(e) or 'unknown'}",
                             }
                         )
-                    except Exception:
-                        pass  # WebSocket already closed
+                    except Exception as e:
+                        logger.debug(f"Error sending error response to websocket: {e}")  # WebSocket already closed
 
             elif message_type == "context":
                 # Handle context injection
@@ -380,6 +381,6 @@ async def chat_websocket_handler(websocket, chat_manager: ChatManager) -> None:
                 )
 
     except Exception as e:
-        logger.error(f"WebSocket error: {e}")
+        logger.error(f"WebSocket error: {e}", exc_info=True)
     finally:
         logger.info("WebSocket client disconnected; subprocess remains alive")

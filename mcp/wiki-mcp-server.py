@@ -13,10 +13,17 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# Add bin/ directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent / "bin"))
+
+from wiki_logging import get_logger
+
+logger = get_logger(__name__)
+
 try:
     from mcp.server.fastmcp import FastMCP
 except ImportError:
-    print("Error: mcp package not installed. Install with: pip install mcp", file=sys.stderr)
+    logger.error("mcp package not installed. Install with: pip install mcp")
     sys.exit(1)
 
 
@@ -39,7 +46,7 @@ if not WIKI_DIR:
 
 mcp = FastMCP(
     "LLM Wiki",
-    description="Knowledge wiki with semantic search, research, and knowledge graph",
+    description="Knowledge wiki with full-text search, research, and knowledge graph",
 )
 
 
@@ -63,13 +70,13 @@ def _run_bin(script: str, args: list[str]) -> str:
 
 @mcp.tool()
 def wiki_search(query: str, limit: int = 10) -> str:
-    """Search the wiki using hybrid semantic + keyword search.
+    """Search the wiki using TF-IDF full-text search.
 
     Args:
         query: Search query
         limit: Maximum results (default 10)
     """
-    return _run_bin("embed.py", ["hybrid", str(_pages_dir()), query, "--top", str(limit), "--json"])
+    return _run_bin("search-fulltext.py", [str(_pages_dir()), query, "--top", str(limit), "--json"])
 
 
 @mcp.tool()

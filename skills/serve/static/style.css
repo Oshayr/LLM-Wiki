@@ -447,23 +447,6 @@
     padding: 8px 0;
 }
 
-/* Maturity badges */
-.maturity-badge {
-    display: inline-block;
-    font-size: 0.7em;
-    padding: 1px 6px;
-    border-radius: 3px;
-    font-family: var(--wiki-font-ui);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.maturity-seed { background: #e5e7eb; color: #6b7280; }
-.maturity-growing { background: #fef3c7; color: #92400e; }
-.maturity-mature { background: #d1fae5; color: #065f46; }
-.maturity-evergreen { background: #dbeafe; color: #1e40af; }
-
 /* Verification badges (fact-checking) */
 .verify-badge {
     display: inline;

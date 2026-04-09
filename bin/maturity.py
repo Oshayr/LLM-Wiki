@@ -18,6 +18,10 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from wiki_logging import get_logger
+
+logger = get_logger(__name__)
+
 
 def _get_git_edit_count(pages_dir: Path, slug: str) -> int:
     """Get number of git commits for a page."""
@@ -28,7 +32,8 @@ def _get_git_edit_count(pages_dir: Path, slug: str) -> int:
             capture_output=True, text=True, cwd=str(pages_dir),
         )
         return len(result.stdout.strip().split("\n")) if result.stdout.strip() else 0
-    except Exception:
+    except Exception as e:
+        logger.debug(f"Could not get git edit count for {slug}: {e}")
         return 0
 
 
@@ -43,8 +48,8 @@ def _count_incoming_links(pages_dir: Path, slug: str) -> int:
             content = md_file.read_text(encoding="utf-8")
             if pattern.search(content):
                 count += 1
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Could not read file {md_file.stem}: {e}")
     return count
 
 

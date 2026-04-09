@@ -30,19 +30,19 @@ Create 2-3 diverse search queries (not repetitive rewording):
 
 Launch `search-channel` subagents in parallel with appropriate channel types:
 - **web** — general web search (default, always included)
-- **academic** — Semantic Scholar, arXiv (for research/science topics)
-- **code** — GitHub, npm/PyPI, Stack Overflow (for technical/code topics)
 - **docs** — Context7, official docs (for library/framework topics)
 
-### 4. Merge Results
+### 4. Merge and Post-Process Results
 
-After all channels return, deduplicate and rank:
+Collect results from all channels and pass to `research-processor` agent for deduplication and condensing:
 
-**Deduplication (can use `python3 bin/tools.py --cmd dedup` for token savings):**
-1. Exact URL match → keep one
-2. DOI match → keep one
-3. Title similarity >85% → keep higher-credibility source
-4. Content-hash (first 500 chars, normalized) → keep one
+**research-processor** handles:
+- Exact URL match → keep one
+- DOI match → keep one
+- Title similarity >85% → keep higher-credibility source
+- Content-hash (first 500 chars, normalized) → keep one
+- Condense overlapping snippets into unified summaries
+- Remove redundant sources that add no new information
 
 **Credibility Tiers:**
 - Tier 1 (high): official docs, peer-reviewed papers, authoritative repos (>1K stars)
@@ -57,7 +57,7 @@ After all channels return, deduplicate and rank:
 
 ### 5. Return Top-N
 
-Return the top 10-20 results as normalized array:
+Receive deduplicated, condensed results from research-processor as normalized array:
 ```json
 {"title": "...", "url": "...", "snippet": "...", "source_type": "web|academic|code|docs", "credibility_tier": 1|2|3, "score": N}
 ```

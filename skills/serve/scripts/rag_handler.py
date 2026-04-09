@@ -2,7 +2,7 @@
 RAG handler for wiki chat — augments chat messages with wiki context.
 
 When RAG mode is enabled, user messages are preprocessed:
-1. Run hybrid search against the wiki embedding index
+1. Run TF-IDF full-text search against the wiki pages
 2. Retrieve top-k section chunks as context
 3. Format the augmented prompt with citation instructions
 4. Post-process response to verify citations are grounded
@@ -67,9 +67,9 @@ class RAGHandler:
                 return augmented
 
         except subprocess.TimeoutExpired:
-            logger.warning("RAG query timed out")
+            logger.warning("RAG query timed out", exc_info=True)
         except Exception as e:
-            logger.warning(f"RAG augmentation error: {e}")
+            logger.warning(f"RAG augmentation error: {e}", exc_info=True)
 
         return user_message
 

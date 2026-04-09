@@ -20,6 +20,10 @@ import sys
 from datetime import datetime, timedelta, UTC
 from pathlib import Path
 
+from wiki_logging import get_logger
+
+logger = get_logger(__name__)
+
 
 class FlashcardDB:
     """Manages spaced repetition flashcards from wiki content."""

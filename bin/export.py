@@ -18,6 +18,10 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
+from wiki_logging import get_logger
+
+logger = get_logger(__name__)
+
 # Type definitions
 WikiNode = dict
 WikiEdge = dict
@@ -42,12 +46,12 @@ class WikiParser:
     def load_wiki(self) -> bool:
         """Load all markdown files from wiki directory."""
         if not self.wiki_dir.exists():
-            print(f"Error: Wiki directory not found: {self.wiki_dir}")
+            logger.error("Wiki directory not found", extra={"path": str(self.wiki_dir)})
             return False
 
         md_files = list(self.wiki_dir.glob("**/*.md"))
         if not md_files:
-            print(f"Warning: No markdown files found in {self.wiki_dir}")
+            logger.warning("No markdown files found", extra={"path": str(self.wiki_dir)})
             return True
 
         for md_file in md_files:
@@ -58,7 +62,7 @@ class WikiParser:
                 self._extract_metadata(slug, content)
                 self._extract_links(slug, content)
             except Exception as e:
-                print(f"Warning: Failed to load {md_file}: {e}")
+                logger.warning("Failed to load file", extra={"file": str(md_file), "error": str(e)}, exc_info=True)
 
         return True
 
@@ -752,10 +756,11 @@ def main():
     # Parse wiki
     parser = WikiParser(wiki_dir)
     if not parser.load_wiki():
+        logger.error("Failed to load wiki")
         sys.exit(1)
 
     if not parser.pages:
-        print("Error: No pages found to export")
+        logger.error("No pages found to export")
         sys.exit(1)
 
     # Export
@@ -780,6 +785,7 @@ def main():
         print(output)
 
     else:
+        logger.error("Unknown export format", extra={"format": export_format})
         print(f"Error: Unknown format '{export_format}'")
         print(__doc__)
         sys.exit(1)
