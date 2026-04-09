@@ -66,7 +66,7 @@ class CitationGraph:
         conn.commit()
         conn.close()
 
-    def _api_get(self, url: str) -> dict | None:
+    def _api_get(self, url: str, _retries: int = 0) -> dict | None:
         """Make a GET request with rate limiting."""
         try:
             req = urllib.request.Request(url)
@@ -74,10 +74,11 @@ class CitationGraph:
             with urllib.request.urlopen(req, timeout=15) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
-            if e.code == 429:
-                print("Rate limited, waiting 5s...", file=sys.stderr)
-                time.sleep(5)
-                return self._api_get(url)
+            if e.code == 429 and _retries < 3:
+                wait = 5 * (2 ** _retries)
+                print(f"Rate limited, waiting {wait}s (retry {_retries + 1}/3)...", file=sys.stderr)
+                time.sleep(wait)
+                return self._api_get(url, _retries=_retries + 1)
             print(f"API error {e.code}: {url}", file=sys.stderr)
             return None
         except Exception as e:

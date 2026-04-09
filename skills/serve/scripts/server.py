@@ -17,6 +17,7 @@ import asyncio
 import json
 import logging
 import random
+import re
 import signal
 import socket
 import subprocess
@@ -51,6 +52,16 @@ chat_manager = None
 wiki_renderer = None
 templates = None
 wiki_dir = None
+
+
+_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+
+
+def _validate_slug(slug: str) -> str | None:
+    """Validate and sanitise a slug, returning None if invalid."""
+    if not slug or not _SLUG_RE.fullmatch(slug) or ".." in slug:
+        return None
+    return slug
 
 
 def _find_similar_page(slug: str, store) -> str | None:
@@ -306,8 +317,8 @@ def create_app() -> FastAPI:
         priority = data.get("priority", "medium")
         depth = data.get("depth", "full")
 
-        if not slug:
-            return {"error": "slug required"}, 400
+        if not _validate_slug(slug):
+            return JSONResponse({"error": "invalid or missing slug"}, status_code=400)
 
         task_id = research_queue.enqueue(
             slug=slug, query=query, task_type=task_type, priority=priority, depth=depth
@@ -328,8 +339,8 @@ def create_app() -> FastAPI:
         slug = data.get("slug")
         section = data.get("section")
 
-        if not slug or not section:
-            return {"error": "slug and section required"}, 400
+        if not _validate_slug(slug) or not section:
+            return JSONResponse({"error": "valid slug and section required"}, status_code=400)
 
         task_id = research_queue.enqueue(
             slug=slug, query=f"{slug} - {section}", task_type="section_expand"
@@ -384,6 +395,8 @@ def create_app() -> FastAPI:
     @app.delete("/api/wiki/{slug}")
     async def api_delete_page(slug: str):
         """Delete a wiki page."""
+        if not _validate_slug(slug):
+            return JSONResponse({"error": "invalid slug"}, status_code=400)
         deleted = wiki_store.delete_page(slug)
         if deleted:
             return {"status": "deleted", "slug": slug}
@@ -623,6 +636,10 @@ def create_app() -> FastAPI:
     @app.get("/api/wiki/{slug}/diff/{commit_hash}")
     async def api_page_diff(slug: str, commit_hash: str):
         """Return git diff for a specific commit on a page."""
+        if not _validate_slug(slug):
+            return JSONResponse({"error": "invalid slug"}, status_code=400)
+        if not re.fullmatch(r"[0-9a-f]{7,40}", commit_hash):
+            return JSONResponse({"error": "invalid commit hash"}, status_code=400)
         page_path = wiki_store.pages_dir / f"{slug}.md"
         try:
             result = subprocess.run(
@@ -677,6 +694,8 @@ def create_app() -> FastAPI:
     @app.post("/api/wiki/{slug}/save")
     async def api_save_page(request: Request, slug: str):
         """Save edited markdown content for a page."""
+        if not _validate_slug(slug):
+            return JSONResponse({"error": "invalid slug"}, status_code=400)
         try:
             data = await request.json()
         except Exception:
@@ -720,8 +739,8 @@ def create_app() -> FastAPI:
         slug = data.get("slug", "").strip()
         content_md = data.get("content", "").strip()
 
-        if not slug:
-            return JSONResponse({"error": "Slug is required"}, status_code=400)
+        if not _validate_slug(slug):
+            return JSONResponse({"error": "Invalid or missing slug"}, status_code=400)
         if not content_md:
             return JSONResponse({"error": "Content is required"}, status_code=400)
 
@@ -761,6 +780,9 @@ def create_app() -> FastAPI:
             base = filename.rsplit(".", 1)[0] if "." in filename else filename
             target_slug = re_mod.sub(r"[^a-z0-9]+", "-", base.lower()).strip("-")
 
+        if not _validate_slug(target_slug):
+            return JSONResponse({"error": "Invalid slug"}, status_code=400)
+
         if ext in ("txt", "md", "markdown"):
             # Text/markdown → create as wiki page
             text = content_bytes.decode("utf-8", errors="replace")
@@ -780,6 +802,8 @@ def create_app() -> FastAPI:
             uploads_dir = Path(__file__).parent.parent / "static" / "uploads"
             uploads_dir.mkdir(parents=True, exist_ok=True)
             safe_name = re_mod.sub(r"[^a-z0-9._-]", "", filename.lower())
+            if ".." in safe_name or not safe_name:
+                return JSONResponse({"error": "Invalid filename"}, status_code=400)
             dest = uploads_dir / safe_name
             dest.write_bytes(content_bytes)
             return {
@@ -1514,8 +1538,10 @@ def main():
         print(f"  Port {args.port} taken, using {port}")
 
     # Setup signal handlers for graceful shutdown
+    loop = asyncio.new_event_loop()
+
     def signal_handler(signum, frame):
-        asyncio.create_task(shutdown_handler())
+        loop.call_soon_threadsafe(loop.create_task, shutdown_handler())
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)

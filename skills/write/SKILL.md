@@ -42,7 +42,7 @@ Launch the `wiki-writer` agent with `mode: ingest`:
 - Fetches content (via `bin/fetch.py` chain: cache → Jina → trafilatura → WebFetch)
 - Saves raw source to `.wiki/raw/`
 - Writes source summary page and entity/concept pages to `.wiki/pages/`
-- Runs backlink audit via `bin/tools.py --cmd backlinks`
+- Runs backlink audit via `bin/backlinks.py update .wiki/pages`
 - Updates `.wiki/index.md`, `.wiki/overview.md`, `.wiki/log.md`
 - **No confirmation pause** — runs end-to-end autonomously
 
