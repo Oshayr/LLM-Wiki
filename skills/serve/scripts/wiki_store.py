@@ -35,6 +35,14 @@ VALID_TYPES = {
     "source",
     "entity",
     "concept",
+    "idea",
+    "brainstorming",
+    "status",
+    "rules",
+    "config",
+    "skill",
+    "memory",
+    "reference",
     "analysis",
     "comparison",
     "research-scan",
@@ -45,6 +53,7 @@ VALID_TYPES = {
     "documentation",
     "automation",
     "lint",
+    "daily-note",
 }
 
 
@@ -237,9 +246,17 @@ class WikiStore:
             # Extract summary (first paragraph)
             summary = self._extract_summary(body)
 
-            # Get modification time
-            stat = md_file.stat()
-            updated_at = datetime.fromtimestamp(stat.st_mtime).isoformat()
+            # Prefer frontmatter updated: date; fall back to filesystem mtime
+            fm_updated = frontmatter.get("updated", "")
+            if fm_updated:
+                try:
+                    updated_at = datetime.strptime(fm_updated, "%Y-%m-%d").isoformat()
+                except ValueError:
+                    stat = md_file.stat()
+                    updated_at = datetime.fromtimestamp(stat.st_mtime).isoformat()
+            else:
+                stat = md_file.stat()
+                updated_at = datetime.fromtimestamp(stat.st_mtime).isoformat()
 
             # Store in database
             cursor = self.db.cursor()
@@ -711,6 +728,7 @@ class WikiStore:
             cursor.execute("SELECT * FROM pages ORDER BY updated_at ASC")
             all_pages = [dict(row) for row in cursor.fetchall()]
 
+            now = datetime.now()
             stale_pages = []
             for page in all_pages:
                 updated_at = page.get("updated_at", "")

@@ -16,8 +16,8 @@ Layer 1 (response_cache): wiki-query answers. TTL 1 day.
 Layer 2 (search_cache): per-channel search results. TTL varies by channel.
 Layer 3 (merged_cache): search-merger ranked output. TTL 3 days.
 
-Channels: web, academic, code, docs
-TTLs: web=7d, academic=30d, code=3d, docs=7d
+Channels: web, academic, code, docs, wikipedia
+TTLs: web=7d, academic=30d, code=3d, docs=7d, wikipedia=30d
 Default cache-db: state/wiki/cache/search.db
 """
 
@@ -35,6 +35,7 @@ CHANNEL_TTLS = {
     "academic": 30,
     "code": 3,
     "docs": 7,
+    "wikipedia": 30,
 }
 
 # Topic-aware TTL overrides (keywords → days)

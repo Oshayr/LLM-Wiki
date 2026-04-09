@@ -25,7 +25,7 @@ from difflib import SequenceMatcher
 from typing import Any
 
 # Configuration
-USER_AGENT = "LLM-Wiki/1.0 (mailto:wiki@llm-wiki.dev)"
+USER_AGENT = "LLM-Wiki/1.0 (https://github.com/Oshayr/llm-wiki)"
 API_DELAY_MS = 100  # milliseconds between API calls to same service
 DEDUP_THRESHOLD = 0.85  # title similarity threshold for deduplication
 

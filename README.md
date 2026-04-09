@@ -93,6 +93,7 @@ Override per-page with `freshness_tier:` or `ttl:` in frontmatter (e.g. `ttl: 30
 git clone https://github.com/Oshayr/llm-wiki .claude/plugins/llm-wiki
 
 # Install dependencies
+# Install dependencies
 pip install -r .claude/plugins/llm-wiki/requirements.txt
 ```
 

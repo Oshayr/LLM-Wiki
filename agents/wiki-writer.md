@@ -120,6 +120,6 @@ Before writing shared files (index.md, overview.md, log.md):
 - **Update mode: autonomous** — applies changes directly, same as ingest
 - **Never fabricate** — every claim traces to source
 - **Flag contradictions** — never silently overwrite
-- **Backlinks are mandatory**
+- **Backlinks are mandatory** — delegate to backlink-manager agent
 - **Confidence requires justification**
 - Report: pages written, pages updated, new backlinks, confidence assigned

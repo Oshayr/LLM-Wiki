@@ -681,7 +681,7 @@ def create_app() -> FastAPI:
         content_md = page.get("content_md", "")
         return templates.TemplateResponse(
             request,
-            "editor.html",
+            "edit.html",
             context={
                 "slug": slug,
                 "page": page,

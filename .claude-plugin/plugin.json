@@ -1,7 +1,7 @@
 {
   "name": "llm-wiki",
-  "version": "1.0.0",
-  "description": "LLM-powered personal wiki — autonomous knowledge base with multi-channel research, ingestion, search, a browsable web UI, and universal data gravity. Saves and retrieves knowledge automatically whenever relevant.",
+  "version": "1.1.0",
+  "description": "LLM-powered personal wiki — autonomous knowledge base with research-on-miss, ingestion, search, a browsable web UI, and universal data gravity. Saves and retrieves knowledge automatically whenever relevant.",
   "author": {
     "name": "Oshayr"
   },

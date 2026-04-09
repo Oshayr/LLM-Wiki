@@ -35,5 +35,8 @@ desktop.ini
 *.swp
 *.swo
 
+# Claude Code local settings (dev-only, not part of the plugin)
+.claude/
+
 # Logs
 *.log

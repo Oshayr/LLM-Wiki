@@ -34,8 +34,12 @@ function initEditor(slug) {
         // This is the wiki's own Jinja/markdown renderer output, not user input.
         var temp = document.createElement('template');
         temp.innerHTML = htmlString;
+        // Smooth transition: brief fade
+        preview.style.opacity = '0.5';
+        preview.style.transition = 'opacity 0.15s ease';
         while (preview.firstChild) preview.removeChild(preview.firstChild);
         preview.appendChild(temp.content.cloneNode(true));
+        requestAnimationFrame(function() { preview.style.opacity = '1'; });
     }
 
     function updatePreview() {
@@ -130,14 +134,48 @@ function initEditor(slug) {
         });
     }
 
-    // ── Tab inserts spaces ──────────────────────────────────────
+    // ── Keyboard shortcuts ───────────────────────────────────────
     editor.addEventListener('keydown', function(e) {
+        // Tab inserts spaces
         if (e.key === 'Tab') {
             e.preventDefault();
             var start = this.selectionStart;
             var end = this.selectionEnd;
             this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
             this.selectionStart = this.selectionEnd = start + 4;
+            return;
+        }
+
+        // Ctrl/Cmd+S to save
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            var saveBtn = document.getElementById('save-btn');
+            if (saveBtn) saveBtn.click();
+            return;
+        }
+
+        // Ctrl/Cmd+B for bold
+        if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+            e.preventDefault();
+            var boldBtn = document.querySelector('[data-md="bold"]');
+            if (boldBtn) boldBtn.click();
+            return;
+        }
+
+        // Ctrl/Cmd+I for italic
+        if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+            e.preventDefault();
+            var italicBtn = document.querySelector('[data-md="italic"]');
+            if (italicBtn) italicBtn.click();
+            return;
+        }
+
+        // Ctrl/Cmd+K for link
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            var linkBtn = document.querySelector('[data-md="link"]');
+            if (linkBtn) linkBtn.click();
+            return;
         }
     });
 
@@ -147,8 +185,8 @@ function initEditor(slug) {
         if (!content.trim() && !instruction) return;
 
         aiBtn.disabled = true;
-        aiBtn.textContent = 'Thinking...';
-        aiStatus.textContent = 'AI is processing...';
+        aiBtn.innerHTML = '<span class="wiki-loading-inline"></span>Thinking...';
+        aiStatus.textContent = 'AI is processing your request...';
         aiStatus.style.color = 'var(--wiki-accent)';
 
         fetch('/api/editor/assist', {

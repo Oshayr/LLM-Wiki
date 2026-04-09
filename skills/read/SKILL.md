@@ -19,6 +19,18 @@ Resolve `.wiki/` from plugin install scope (user-level → `~/.wiki/`, project-l
 
 Launch the `wiki-reader` agent with the question and depth level.
 
+### Standard depth (default)
+1. Read `.wiki/index.md`, identify 2-4 relevant pages
+2. For >200 pages: use `bin/search-fulltext.py` for ranked results
+3. Read the relevant pages, synthesize a cited answer with `[[slug]]` references
+4. **If NOT found or insufficient**: automatically research using whatever tools are available:
+   - Discover available tools at runtime (WebSearch, WebFetch, `wiki_wikipedia_search` for factual/encyclopedic topics, any MCP tools like Perplexity, Context7, etc.)
+   - Search using available tools, fetch and extract content
+   - Ingest results via `wiki-writer` agent (mode: ingest)
+   - Answer from the newly created pages with `[[slug]]` citations
+   - Note: "Researched fresh and saved to wiki."
+5. Offer to save analysis as a wiki page if the answer is substantial
+
 ### Quick depth
 - Read `.wiki/index.md` only
 - Scan for matching slugs/titles by text match

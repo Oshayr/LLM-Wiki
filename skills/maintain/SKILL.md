@@ -3,7 +3,7 @@ name: wiki-maintain
 description: "Wiki maintenance — lint broken links, merge near-duplicates, upgrade confidence, flag stale pages, gap analysis, concept synthesis. Use on: 'wiki maintenance', 'wiki cleanup', 'fix wiki', 'wiki health', 'check wiki', 'consolidate wiki'."
 ---
 
-# Maintain
+# Wiki Maintain
 
 Comprehensive wiki maintenance: lint, deduplicate, upgrade, and analyze.
 
@@ -40,7 +40,7 @@ Pages with 3+ independent sources in frontmatter get upgraded:
 - `medium` → `high` (if 3+ corroborating sources)
 - Write the reason in log.md
 
-### 4. Stale Detection
+### 4. Stale Detection (Freshness Tiers)
 
 Pages are flagged based on their freshness tier:
 
