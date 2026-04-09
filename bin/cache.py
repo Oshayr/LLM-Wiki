@@ -499,12 +499,14 @@ def main():
             command_store(conn, args.channel, args.query, args.results_json)
 
         elif args.command == "write-merged":
+            # Positional reuse: args.channel=queries_json, args.query=results_json
             if not args.channel or not args.query:
                 logger.error("write-merged requires <queries_json> <results_json>")
                 sys.exit(1)
             command_write_merged(conn, args.channel, args.query)
 
         elif args.command == "read-merged":
+            # Positional reuse: args.channel=queries_json
             if not args.channel:
                 logger.error("read-merged requires <queries_json>")
                 sys.exit(1)

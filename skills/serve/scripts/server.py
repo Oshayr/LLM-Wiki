@@ -26,7 +26,7 @@ from datetime import datetime
 
 import uvicorn
 from chat_manager import ChatManager, chat_websocket_handler
-from fastapi import FastAPI, Query, WebSocket
+from fastapi import Depends, FastAPI, Query, WebSocket
 from fastapi.responses import (
     HTMLResponse,
     JSONResponse,
@@ -44,16 +44,8 @@ from wiki_store import WikiStore
 logger = logging.getLogger(__name__)
 
 
-# Global state
-wiki_store = None
-research_queue = None
-worker_pool = None
-chat_manager = None
-wiki_renderer = None
-templates = None
-wiki_dir = None
-
-
+# State is managed via app.state (FastAPI dependency injection pattern)
+# Components are attached to app.state in main() and accessed via Depends() in routes
 _SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 
 
@@ -62,6 +54,42 @@ def _validate_slug(slug: str) -> str | None:
     if not slug or not _SLUG_RE.fullmatch(slug) or ".." in slug:
         return None
     return slug
+
+
+# Dependency injection helpers — accessed via Depends() in route handlers
+def get_wiki_store(request: Request) -> WikiStore:
+    """Get WikiStore from app state."""
+    return request.app.state.wiki_store
+
+
+def get_research_queue(request: Request) -> ResearchQueue:
+    """Get ResearchQueue from app state."""
+    return request.app.state.research_queue
+
+
+def get_wiki_renderer(request: Request) -> WikiRenderer:
+    """Get WikiRenderer from app state."""
+    return request.app.state.wiki_renderer
+
+
+def get_templates(request: Request) -> Jinja2Templates:
+    """Get Jinja2Templates from app state."""
+    return request.app.state.templates
+
+
+def get_chat_manager(request: Request) -> ChatManager | None:
+    """Get ChatManager from app state (may be None if disabled)."""
+    return request.app.state.chat_manager
+
+
+def get_worker_pool(request: Request) -> ResearchWorkerPool | None:
+    """Get ResearchWorkerPool from app state."""
+    return request.app.state.worker_pool
+
+
+def get_wiki_dir(request: Request) -> Path:
+    """Get wiki directory from app state."""
+    return request.app.state.wiki_dir
 
 
 def _find_similar_page(slug: str, store) -> str | None:
@@ -177,7 +205,13 @@ def create_app() -> FastAPI:
 
     # GET /
     @app.get("/")
-    async def home(request: Request):
+    async def home(
+        request: Request,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+        research_queue: ResearchQueue = Depends(get_research_queue),
+        templates: Jinja2Templates = Depends(get_templates),
+        chat_manager: ChatManager | None = Depends(get_chat_manager),
+    ):
         """Home page with wiki stats and recent pages."""
         stats = wiki_store.get_stats()
         recent = wiki_store.get_recent_pages(limit=10)
@@ -196,7 +230,15 @@ def create_app() -> FastAPI:
 
     # GET /wiki/{slug}
     @app.get("/wiki/{slug}")
-    async def wiki_page(request: Request, slug: str):
+    async def wiki_page(
+        request: Request,
+        slug: str,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+        research_queue: ResearchQueue = Depends(get_research_queue),
+        wiki_renderer: WikiRenderer = Depends(get_wiki_renderer),
+        templates: Jinja2Templates = Depends(get_templates),
+        chat_manager: ChatManager | None = Depends(get_chat_manager),
+    ):
         """Render or research a wiki page."""
         page = wiki_store.get_page(slug)
 
@@ -283,7 +325,13 @@ def create_app() -> FastAPI:
 
     # GET /search
     @app.get("/search")
-    async def search(request: Request, q: str = Query("", alias="q")):
+    async def search(
+        request: Request,
+        q: str = Query("", alias="q"),
+        wiki_store: WikiStore = Depends(get_wiki_store),
+        templates: Jinja2Templates = Depends(get_templates),
+        chat_manager: ChatManager | None = Depends(get_chat_manager),
+    ):
         """Search for pages and topics."""
         results = []
 
@@ -303,7 +351,10 @@ def create_app() -> FastAPI:
 
     # POST /api/research
     @app.post("/api/research")
-    async def api_research(request: Request):
+    async def api_research(
+        request: Request,
+        research_queue: ResearchQueue = Depends(get_research_queue),
+    ):
         """Queue a research task."""
         try:
             data = await request.json()
@@ -334,7 +385,10 @@ def create_app() -> FastAPI:
 
     # POST /api/expand
     @app.post("/api/expand")
-    async def api_expand(request: Request):
+    async def api_expand(
+        request: Request,
+        research_queue: ResearchQueue = Depends(get_research_queue),
+    ):
         """Queue a section expansion task."""
         data = await request.json()
         slug = data.get("slug")
@@ -357,7 +411,11 @@ def create_app() -> FastAPI:
 
     # POST /api/research/{task_id}/cancel
     @app.post("/api/research/{task_id}/cancel")
-    async def api_cancel_task(task_id: int):
+    async def api_cancel_task(
+        task_id: int,
+        research_queue: ResearchQueue = Depends(get_research_queue),
+        worker_pool: ResearchWorkerPool | None = Depends(get_worker_pool),
+    ):
         """Cancel a queued or researching task."""
         prev_status = research_queue.cancel(task_id)
         if prev_status is None:
@@ -373,7 +431,11 @@ def create_app() -> FastAPI:
 
     # POST /api/research/{task_id}/reorder
     @app.post("/api/research/{task_id}/reorder")
-    async def api_reorder_task(request: Request, task_id: int):
+    async def api_reorder_task(
+        request: Request,
+        task_id: int,
+        research_queue: ResearchQueue = Depends(get_research_queue),
+    ):
         """Move a queued task up or down in priority."""
         data = await request.json()
         direction = data.get("direction", "up")
@@ -394,7 +456,10 @@ def create_app() -> FastAPI:
 
     # DELETE /api/wiki/{slug}
     @app.delete("/api/wiki/{slug}")
-    async def api_delete_page(slug: str):
+    async def api_delete_page(
+        slug: str,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         """Delete a wiki page."""
         if not _validate_slug(slug):
             return JSONResponse({"error": "invalid slug"}, status_code=400)
@@ -405,7 +470,9 @@ def create_app() -> FastAPI:
 
     # GET /api/research/active
     @app.get("/api/research/active")
-    async def api_research_active():
+    async def api_research_active(
+        research_queue: ResearchQueue = Depends(get_research_queue),
+    ):
         """Get active and queued research tasks for the sidebar."""
         tasks = research_queue.get_active_tasks(limit=20)
         result = []
@@ -436,7 +503,10 @@ def create_app() -> FastAPI:
 
     # GET /api/status/{slug}
     @app.get("/api/status/{slug}")
-    async def api_status(slug: str):
+    async def api_status(
+        slug: str,
+        research_queue: ResearchQueue = Depends(get_research_queue),
+    ):
         """SSE endpoint for research progress updates."""
 
         async def sse_generator():
@@ -480,7 +550,10 @@ def create_app() -> FastAPI:
 
     # GET /api/suggestions
     @app.get("/api/suggestions")
-    async def api_suggestions(q: str = Query("", alias="q")):
+    async def api_suggestions(
+        q: str = Query("", alias="q"),
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         """Search autocomplete suggestions."""
         if not q or len(q) < 2:
             return []
@@ -497,6 +570,7 @@ def create_app() -> FastAPI:
     @app.websocket("/ws/chat")
     async def websocket_chat(websocket: WebSocket):
         """WebSocket chat endpoint."""
+        chat_manager: ChatManager | None = websocket.app.state.chat_manager
         if chat_manager is None:
             await websocket.close(code=1008, reason="Chat disabled")
             return
@@ -505,7 +579,13 @@ def create_app() -> FastAPI:
 
     # GET /research - Research Dashboard
     @app.get("/research", response_class=HTMLResponse)
-    async def research_dashboard(request: Request):
+    async def research_dashboard(
+        request: Request,
+        research_queue: ResearchQueue = Depends(get_research_queue),
+        templates: Jinja2Templates = Depends(get_templates),
+        chat_manager: ChatManager | None = Depends(get_chat_manager),
+        wiki_dir: Path = Depends(get_wiki_dir),
+    ):
         """Research pipeline dashboard."""
         active_tasks = research_queue.get_active_tasks()
         history = research_queue.get_history(limit=30)
@@ -513,7 +593,7 @@ def create_app() -> FastAPI:
         priority_stats = research_queue.get_priority_stats()
 
         # Read autoresearch scoreboard if it exists
-        scoreboard_path = Path(wiki_dir) / "../autoresearch/scoreboard.md"
+        scoreboard_path = wiki_dir / "../autoresearch/scoreboard.md"
         scoreboard = ""
         if scoreboard_path.exists():
             scoreboard = scoreboard_path.read_text()
@@ -537,7 +617,12 @@ def create_app() -> FastAPI:
 
     # GET /graph - Knowledge Graph
     @app.get("/graph", response_class=HTMLResponse)
-    async def knowledge_graph(request: Request):
+    async def knowledge_graph(
+        request: Request,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+        templates: Jinja2Templates = Depends(get_templates),
+        chat_manager: ChatManager | None = Depends(get_chat_manager),
+    ):
         """Interactive knowledge graph visualization."""
         pages = wiki_store.get_all_pages()
 
@@ -583,7 +668,13 @@ def create_app() -> FastAPI:
 
     # GET /wiki/{slug}/history - Page History
     @app.get("/wiki/{slug}/history", response_class=HTMLResponse)
-    async def page_history(request: Request, slug: str):
+    async def page_history(
+        request: Request,
+        slug: str,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+        templates: Jinja2Templates = Depends(get_templates),
+        chat_manager: ChatManager | None = Depends(get_chat_manager),
+    ):
         """Git-backed page history."""
         page = wiki_store.get_page(slug)
         if not page:
@@ -635,7 +726,11 @@ def create_app() -> FastAPI:
 
     # GET /api/wiki/{slug}/diff/{commit_hash} - View diff for a commit
     @app.get("/api/wiki/{slug}/diff/{commit_hash}")
-    async def api_page_diff(slug: str, commit_hash: str):
+    async def api_page_diff(
+        slug: str,
+        commit_hash: str,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         """Return git diff for a specific commit on a page."""
         if not _validate_slug(slug):
             return JSONResponse({"error": "invalid slug"}, status_code=400)
@@ -674,7 +769,13 @@ def create_app() -> FastAPI:
 
     # GET /wiki/{slug}/edit - Edit page
     @app.get("/wiki/{slug}/edit", response_class=HTMLResponse)
-    async def edit_page(request: Request, slug: str):
+    async def edit_page(
+        request: Request,
+        slug: str,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+        templates: Jinja2Templates = Depends(get_templates),
+        chat_manager: ChatManager | None = Depends(get_chat_manager),
+    ):
         """Markdown editor for a wiki page."""
         page = wiki_store.get_page(slug)
         if not page:
@@ -694,7 +795,11 @@ def create_app() -> FastAPI:
 
     # POST /api/wiki/{slug}/save - Save edited page
     @app.post("/api/wiki/{slug}/save")
-    async def api_save_page(request: Request, slug: str):
+    async def api_save_page(
+        request: Request,
+        slug: str,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         """Save edited markdown content for a page."""
         if not _validate_slug(slug):
             return JSONResponse({"error": "invalid slug"}, status_code=400)
@@ -719,7 +824,12 @@ def create_app() -> FastAPI:
 
     # GET /create - Create new page form
     @app.get("/create", response_class=HTMLResponse)
-    async def create_page_form(request: Request, slug: str = Query("", alias="slug")):
+    async def create_page_form(
+        request: Request,
+        slug: str = Query("", alias="slug"),
+        templates: Jinja2Templates = Depends(get_templates),
+        chat_manager: ChatManager | None = Depends(get_chat_manager),
+    ):
         """Form to create a new wiki page."""
         return templates.TemplateResponse(
             request,
@@ -732,7 +842,10 @@ def create_app() -> FastAPI:
 
     # POST /api/wiki/create - Create a new page
     @app.post("/api/wiki/create")
-    async def api_create_page(request: Request):
+    async def api_create_page(
+        request: Request,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         """Create a new wiki page from form data."""
         try:
             data = await request.json()
@@ -764,7 +877,10 @@ def create_app() -> FastAPI:
 
     # POST /api/wiki/import - Import files (txt, images, PDF)
     @app.post("/api/wiki/import")
-    async def api_import_file(request: Request):
+    async def api_import_file(
+        request: Request,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         """Import a file as a wiki page or attachment."""
         import re as re_mod
 
@@ -848,7 +964,10 @@ def create_app() -> FastAPI:
 
     # POST /api/annotations - Add annotation
     @app.post("/api/annotations")
-    async def add_annotation(request: Request):
+    async def add_annotation(
+        request: Request,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         """Add an annotation to a page."""
         data = await request.json()
         aid = wiki_store.add_annotation(
@@ -862,21 +981,30 @@ def create_app() -> FastAPI:
 
     # GET /api/annotations/{slug} - Get annotations
     @app.get("/api/annotations/{slug}")
-    async def get_annotations(slug: str):
+    async def get_annotations(
+        slug: str,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         """Get all annotations for a page."""
         annotations = wiki_store.get_annotations(slug)
         return JSONResponse(annotations)
 
     # POST /api/annotations/{annotation_id}/resolve - Resolve annotation
     @app.post("/api/annotations/{annotation_id}/resolve")
-    async def resolve_annotation(annotation_id: int):
+    async def resolve_annotation(
+        annotation_id: int,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         """Mark an annotation as resolved."""
         wiki_store.resolve_annotation(annotation_id)
         return JSONResponse({"status": "resolved"})
 
     # GET /api/suggestions/research/{slug} - Research suggestions
     @app.get("/api/suggestions/research/{slug}")
-    async def research_suggestions(slug: str):
+    async def research_suggestions(
+        slug: str,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         """Suggest related topics to research based on current page."""
         page = wiki_store.get_page(slug)
         suggestions = []
@@ -923,7 +1051,10 @@ def create_app() -> FastAPI:
 
     # GET /daily — Today's daily note
     @app.get("/daily")
-    async def daily_note(request: Request):
+    async def daily_note(
+        request: Request,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         """Redirect to today's daily note, creating it if needed."""
         import subprocess
 
@@ -946,7 +1077,11 @@ def create_app() -> FastAPI:
 
     # GET /review — Spaced repetition review
     @app.get("/review", response_class=HTMLResponse)
-    async def review_page(request: Request):
+    async def review_page(
+        request: Request,
+        templates: Jinja2Templates = Depends(get_templates),
+        chat_manager: ChatManager | None = Depends(get_chat_manager),
+    ):
         """Spaced repetition review interface."""
         import subprocess
 
@@ -1017,7 +1152,10 @@ def create_app() -> FastAPI:
 
     # GET /api/wiki/{slug}/backlinks — Enhanced backlinks with unlinked mentions
     @app.get("/api/wiki/{slug}/backlinks")
-    async def api_backlinks(slug: str):
+    async def api_backlinks(
+        slug: str,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         backlinks = wiki_store.get_backlinks(slug)
         # Also get unlinked mentions
         import subprocess
@@ -1035,7 +1173,11 @@ def create_app() -> FastAPI:
 
     # POST /api/wiki/{slug}/link-mention — Convert unlinked mention to wiki link
     @app.post("/api/wiki/{slug}/link-mention")
-    async def api_link_mention(slug: str, request: Request):
+    async def api_link_mention(
+        slug: str,
+        request: Request,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         data = await request.json()
         source_slug = data.get("source_slug")
         line_number = data.get("line_number")
@@ -1053,7 +1195,10 @@ def create_app() -> FastAPI:
 
     # GET /api/wiki/{slug}/suggested-links — Suggested links via backlinks analysis
     @app.get("/api/wiki/{slug}/suggested-links")
-    async def api_suggested_links(slug: str):
+    async def api_suggested_links(
+        slug: str,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         import subprocess
         bin_dir = Path(__file__).parent.parent.parent.parent / "bin"
         result = subprocess.run(
@@ -1069,7 +1214,10 @@ def create_app() -> FastAPI:
 
     # GET /api/wiki/{slug}/provenance — Provenance chain
     @app.get("/api/wiki/{slug}/provenance")
-    async def api_provenance(slug: str):
+    async def api_provenance(
+        slug: str,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         import subprocess
         bin_dir = Path(__file__).parent.parent.parent.parent / "bin"
         cache_dir = str(wiki_store.wiki_dir / "cache")
@@ -1085,7 +1233,12 @@ def create_app() -> FastAPI:
 
     # GET /gaps — Gap analysis dashboard
     @app.get("/gaps", response_class=HTMLResponse)
-    async def gaps_dashboard(request: Request):
+    async def gaps_dashboard(
+        request: Request,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+        templates: Jinja2Templates = Depends(get_templates),
+        chat_manager: ChatManager | None = Depends(get_chat_manager),
+    ):
         import subprocess
         bin_dir = Path(__file__).parent.parent.parent.parent / "bin"
         result = subprocess.run(
@@ -1105,7 +1258,10 @@ def create_app() -> FastAPI:
 
     # POST /api/query — Execute frontmatter query
     @app.post("/api/query")
-    async def api_query(request: Request):
+    async def api_query(
+        request: Request,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         data = await request.json()
         query_str = data.get("query", "")
         if not query_str:
@@ -1124,7 +1280,10 @@ def create_app() -> FastAPI:
 
     # POST /api/wiki/{slug}/undo — Undo last commit for a page
     @app.post("/api/wiki/{slug}/undo")
-    async def api_undo_page(slug: str):
+    async def api_undo_page(
+        slug: str,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         import subprocess
         bin_dir = Path(__file__).parent.parent.parent.parent / "bin"
         result = subprocess.run(
@@ -1140,7 +1299,12 @@ def create_app() -> FastAPI:
 
     # GET /canvas — Canvas/whiteboard view
     @app.get("/canvas", response_class=HTMLResponse)
-    async def canvas_view(request: Request):
+    async def canvas_view(
+        request: Request,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+        templates: Jinja2Templates = Depends(get_templates),
+        chat_manager: ChatManager | None = Depends(get_chat_manager),
+    ):
         """Interactive canvas/whiteboard with wiki page cards."""
         pages = wiki_store.get_all_pages()
         existing_slugs = {p["slug"] for p in pages}
@@ -1185,7 +1349,10 @@ def create_app() -> FastAPI:
 
     # POST /api/canvas/save — Save canvas layout
     @app.post("/api/canvas/save")
-    async def api_canvas_save(request: Request):
+    async def api_canvas_save(
+        request: Request,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         data = await request.json()
         canvas_dir = wiki_store.wiki_dir / "canvas"
         canvas_dir.mkdir(parents=True, exist_ok=True)
@@ -1195,7 +1362,9 @@ def create_app() -> FastAPI:
 
     # GET /random - Random page redirect
     @app.get("/random")
-    async def random_page():
+    async def random_page(
+        wiki_store: WikiStore = Depends(get_wiki_store),
+    ):
         """Redirect to a random wiki page."""
         pages = wiki_store.get_all_pages()
         if not pages:
@@ -1205,7 +1374,12 @@ def create_app() -> FastAPI:
 
     # GET /recent - Recent changes
     @app.get("/recent", response_class=HTMLResponse)
-    async def recent_changes(request: Request):
+    async def recent_changes(
+        request: Request,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+        templates: Jinja2Templates = Depends(get_templates),
+        chat_manager: ChatManager | None = Depends(get_chat_manager),
+    ):
         """Recent changes page."""
         recent = wiki_store.get_recent_pages(limit=50)
         return templates.TemplateResponse(
@@ -1219,7 +1393,13 @@ def create_app() -> FastAPI:
 
     # GET /stats - Wiki statistics
     @app.get("/stats", response_class=HTMLResponse)
-    async def stats_page(request: Request):
+    async def stats_page(
+        request: Request,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+        research_queue: ResearchQueue = Depends(get_research_queue),
+        templates: Jinja2Templates = Depends(get_templates),
+        chat_manager: ChatManager | None = Depends(get_chat_manager),
+    ):
         """Detailed wiki statistics."""
         stats = wiki_store.get_stats()
         missing = wiki_store.get_missing_pages()
@@ -1237,7 +1417,10 @@ def create_app() -> FastAPI:
 
     # POST /api/chat - HTTP fallback for chat
     @app.post("/api/chat")
-    async def api_chat(request: Request):
+    async def api_chat(
+        request: Request,
+        chat_manager: ChatManager | None = Depends(get_chat_manager),
+    ):
         """HTTP fallback for chat messages."""
         if chat_manager is None:
             return JSONResponse({"error": "Chat disabled"}, status_code=503)
@@ -1254,7 +1437,9 @@ def create_app() -> FastAPI:
 
     # GET /api/chat/history - Chat history
     @app.get("/api/chat/history")
-    async def api_chat_history():
+    async def api_chat_history(
+        chat_manager: ChatManager | None = Depends(get_chat_manager),
+    ):
         """Return chat history."""
         if chat_manager is None:
             return JSONResponse({"messages": []})
@@ -1265,7 +1450,10 @@ def create_app() -> FastAPI:
 
     # POST /api/preview - Render markdown to HTML for live preview
     @app.post("/api/preview")
-    async def api_preview(request: Request):
+    async def api_preview(
+        request: Request,
+        wiki_renderer: WikiRenderer = Depends(get_wiki_renderer),
+    ):
         """Render markdown content to HTML for the editor preview pane."""
         data = await request.json()
         content = data.get("content", "")
@@ -1344,7 +1532,11 @@ def create_app() -> FastAPI:
 
     # GET /api/export/{format} - Export entire wiki
     @app.get("/api/export/{fmt}")
-    async def api_export(fmt: str):
+    async def api_export(
+        fmt: str,
+        wiki_store: WikiStore = Depends(get_wiki_store),
+        wiki_renderer: WikiRenderer = Depends(get_wiki_renderer),
+    ):
         """Export the entire wiki as a single HTML file or markdown bundle.
         Supported formats: html, md"""
         pages = wiki_store.get_all_pages()
@@ -1411,15 +1603,19 @@ def create_app() -> FastAPI:
     return app
 
 
-async def shutdown_handler():
+async def shutdown_handler(app: FastAPI | None = None):
     """Gracefully shut down all services."""
     print("\nShutting down...")
 
-    if worker_pool:
-        worker_pool.stop()
+    if app:
+        worker_pool: ResearchWorkerPool | None = getattr(app.state, "worker_pool", None)
+        chat_manager: ChatManager | None = getattr(app.state, "chat_manager", None)
 
-    if chat_manager:
-        await chat_manager.stop()
+        if worker_pool:
+            worker_pool.stop()
+
+        if chat_manager:
+            await chat_manager.stop()
 
     print("Shutdown complete")
 
@@ -1447,9 +1643,6 @@ def main():
     parser.add_argument("--no-chat", action="store_true", help="Disable chat sidebar")
 
     args = parser.parse_args()
-
-    # Initialize global state
-    global wiki_store, research_queue, worker_pool, chat_manager, wiki_renderer, templates, wiki_dir
 
     wiki_dir = Path(args.wiki_dir)
     wiki_dir.mkdir(parents=True, exist_ok=True)
@@ -1490,6 +1683,7 @@ def main():
     print(f"  Research workers started ({args.workers} workers)")
 
     # Initialize ChatManager (if enabled)
+    chat_manager = None
     if not args.no_chat:
         chat_manager = ChatManager(wiki_store=wiki_store)
         print("  ChatManager initialized")
@@ -1552,6 +1746,15 @@ def main():
     # Create and configure app
     app = create_app()
 
+    # Store components in app.state (FastAPI dependency injection pattern)
+    app.state.wiki_store = wiki_store
+    app.state.research_queue = research_queue
+    app.state.worker_pool = worker_pool
+    app.state.chat_manager = chat_manager
+    app.state.wiki_renderer = wiki_renderer
+    app.state.templates = templates
+    app.state.wiki_dir = wiki_dir
+
     # Find available port
     port = find_free_port(args.port)
     if port != args.port:
@@ -1561,7 +1764,7 @@ def main():
     loop = asyncio.new_event_loop()
 
     def signal_handler(signum, frame):
-        loop.call_soon_threadsafe(loop.create_task, shutdown_handler())
+        loop.call_soon_threadsafe(loop.create_task, shutdown_handler(app))
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
@@ -1586,7 +1789,7 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
-        asyncio.run(shutdown_handler())
+        asyncio.run(shutdown_handler(app))
 
 
 if __name__ == "__main__":

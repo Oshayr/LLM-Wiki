@@ -18,7 +18,11 @@ You explore citation chains to find relevant papers for the wiki using web searc
 ## Process
 
 1. **Identify the seed paper** — use the provided DOI, title, or topic
-2. **Search for citations** — use web search to find papers that cite or are cited by the seed
+2. **Trace citations** — use `bin/citation_graph.py` for structured traversal:
+   - Forward citations: `python3 bin/citation_graph.py forward <identifier>`
+   - Backward citations: `python3 bin/citation_graph.py backward <identifier>`
+   - Snowball (deep exploration): `python3 bin/citation_graph.py snowball <identifier> --depth 2`
+   - Supplement with web search for papers not covered by APIs
 3. **Analyze results** — identify the most relevant papers by:
    - Citation count (impact)
    - Recency (prefer recent papers)

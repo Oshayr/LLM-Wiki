@@ -37,6 +37,7 @@ desktop.ini
 
 # Claude Code local settings (dev-only, not part of the plugin)
 .claude/
+Claude.md
 
 # Logs
 *.log

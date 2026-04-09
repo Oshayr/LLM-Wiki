@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""search-academic.py — Removed.
+"""search-academic.py — Search academic papers across multiple free APIs.
 
-External academic API search (Semantic Scholar, OpenAlex, CrossRef, arXiv)
-has been removed from LLM-Wiki. Use Claude's built-in web search instead.
+Searches Semantic Scholar, OpenAlex, CrossRef, and arXiv. Returns normalized
+JSON arrays. Deduplicates results and provides citation formatting (APA, BibTeX).
 """
 
 import argparse

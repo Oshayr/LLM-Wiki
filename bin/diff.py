@@ -261,7 +261,7 @@ def format_markdown_table(diff: dict[str, Any]) -> str:
         elif change_type == "removed":
             details = f'-{change["old"]}'
         elif change_type in ("modified", "upgraded", "downgraded"):
-            details = f'{change["old"]} → {change["new"]}'
+            details = f'{change["old"]} -> {change["new"]}'
         else:
             details = ""
 

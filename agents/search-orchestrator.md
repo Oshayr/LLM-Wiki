@@ -32,6 +32,8 @@ Launch `search-channel` subagents in parallel with appropriate channel types:
 - **web** — general web search (default, always included)
 - **docs** — Context7, official docs (for library/framework topics)
 - **wikipedia** — MediaWiki Action API (for factual, encyclopedic, historical, scientific concept queries)
+- **academic** — Semantic Scholar, arXiv, OpenAlex, CrossRef (for research papers, scientific topics)
+- **code** — GitHub, npm, PyPI, Stack Overflow (for libraries, packages, code examples)
 
 ### 4. Merge and Post-Process Results
 

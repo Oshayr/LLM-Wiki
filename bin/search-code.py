@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""search-code.py — Removed.
+"""search-code.py — Search code repositories and packages across multiple sources.
 
-External code search (GitHub, npm, PyPI, Stack Overflow) has been removed
-from LLM-Wiki. Use Claude's built-in web search instead.
+Searches GitHub repos, npm/PyPI packages, and Stack Overflow Q&A. Returns
+normalized JSON arrays with repository metadata, package info, and answers.
 """
 
 import argparse

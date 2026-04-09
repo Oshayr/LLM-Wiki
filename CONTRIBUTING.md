@@ -27,7 +27,7 @@ claude plugin install ./
 | Directory | Purpose |
 |-----------|---------|
 | `agents/` | Agent markdown specs (Claude reads these) |
-| `bin/` | 24 Python utility scripts called by agents |
+| `bin/` | 23 Python utility scripts called by agents |
 | `mcp/` | FastMCP server exposing wiki as MCP tools |
 | `rules/` | Always-on behavioral rules |
 | `skills/` | Slash-command skill definitions |

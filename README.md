@@ -44,7 +44,6 @@ Inspired by [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpath
 
 ### Maintenance
 - **Self-maintaining** — lints broken links, merges duplicates, upgrades confidence, flags stale content
-- **Progressive summarization** and note maturity tracking (seed/growing/mature/evergreen)
 - **Daily notes** and journal workflows
 - **Smart caching** with adaptive TTL and stale-while-revalidate
 - **Circuit breakers** for external API resilience
@@ -78,19 +77,84 @@ Required for vector operations in search and caching.
 
 ## Skills Reference
 
-| Command | Purpose | Example |
-|---------|---------|---------|
-| `/wiki-write <source>` | Ingest from URL, file, or text | `/wiki-write https://arxiv.org/abs/2301.00001` |
-| `/wiki-write --update <slug>` | Update existing page autonomously | `/wiki-write --update transformer-attention` |
-| `/wiki-read <question>` | Search wiki + auto-research if missing | `/wiki-read "How does MCP work?"` |
-| `/wiki-read quick <question>` | Index scan only, no research | `/wiki-read quick "MCP"` |
-| `/wiki-read deep <question>` | Full search + raw sources + research | `/wiki-read deep "attention mechanisms"` |
-| `/wiki-serve` | Start web UI on localhost:8420 | `/wiki-serve` |
-| `/wiki-maintain` | Lint, dedup, upgrade, gap analysis | `/wiki-maintain` |
-| `/wiki-maintain gaps` | Content gap analysis only | `/wiki-maintain gaps` |
-| `/wiki-view` | Dashboard summary | `/wiki-view` |
-| `/wiki-view graph` | Knowledge graph (Mermaid) | `/wiki-view graph transformer-attention` |
-| `/wiki-view export json` | Export as knowledge graph JSON | `/wiki-view export json` |
+### `/wiki-write` — Add or Update Content
+
+Ingest from URLs, files, or text. Auto-creates `.wiki/` on first use.
+
+| Mode | Command | Purpose |
+|------|---------|---------|
+| Ingest | `/wiki-write <url>` | Fetch and ingest web page or paper |
+| Ingest | `/wiki-write <file>` | Ingest local file (markdown, text, PDF) |
+| Ingest | `/wiki-write "text..."` | Ingest inline text directly |
+| Batch | `/wiki-write --batch <dir>` | Ingest all `.md` files in directory |
+| Update | `/wiki-write --update <slug>` | Autonomously update existing page |
+| Refresh | `/wiki-write --refresh-stale` | Find and refresh stale pages |
+
+**Page types:** `concept`, `idea`, `brainstorming`, `status`, `rules`, `config`, `skill`, `memory`, `reference`, or custom types from `.wiki/templates/`
+
+### `/wiki-read` — Search and Query
+
+Ask the wiki questions. Automatically researches if knowledge is missing.
+
+| Depth | Command | Behavior |
+|-------|---------|----------|
+| Quick | `/wiki-read quick <question>` | Index scan only, no research fallback (fastest) |
+| Standard | `/wiki-read <question>` | Search wiki + auto-research if missing |
+| Deep | `/wiki-read deep <question>` | Full search + raw sources + multi-channel research |
+
+All answers include `[[slug]]` citations. Contradictions between sources are explicitly noted.
+
+### `/wiki-serve` — Web UI
+
+Launch Wikipedia-style browsable website at `localhost:8420`.
+
+**Features:**
+- 4 themes (light, dark, terminal, wikipedia)
+- Interactive knowledge graph (Cytoscape.js)
+- Split-pane markdown editor with live preview
+- WebSocket chat with RAG-augmented Q&A
+- Live research (click red links to auto-research)
+- Spaced repetition review (FSRS-based)
+- Content gap analysis dashboard
+- Canvas/whiteboard spatial view
+
+**Stop:** `/wiki-serve stop`
+
+### `/wiki-maintain` — Health Maintenance
+
+Comprehensive wiki maintenance and quality control.
+
+| Subcommand | Purpose |
+|------------|---------|
+| `/wiki-maintain` | Run all maintenance steps |
+| `/wiki-maintain lint` | Fix broken links, missing frontmatter, orphans |
+| `/wiki-maintain dedup` | Find and merge near-duplicate pages |
+| `/wiki-maintain gaps` | Analyze knowledge gaps and missing coverage |
+
+**Maintenance steps:**
+1. **Lint** — fix broken `[[links]]`, missing frontmatter, orphan pages
+2. **Deduplicate** — merge pages with >60% slug token overlap
+3. **Confidence upgrade** — promote pages based on source count (low→medium→high)
+4. **Stale detection** — flag pages past their freshness tier TTL
+5. **Fact-checking** — verify claims on high-confidence pages
+6. **Concept synthesis** — auto-generate articles connecting 3+ related pages
+7. **Index regeneration** — rebuild `index.md` from all pages
+
+### `/wiki-view` — Dashboard and Export
+
+Read-only dashboard, statistics, and export capabilities.
+
+| Subcommand | Purpose |
+|------------|---------|
+| `/wiki-view` | Dashboard summary (page counts, recent activity, health) |
+| `/wiki-view pages` | List all pages grouped by type |
+| `/wiki-view stats` | Detailed statistics and distributions |
+| `/wiki-view graph` | Knowledge graph visualization (Mermaid) |
+| `/wiki-view graph <slug>` | Graph centered on page (2-hop neighborhood) |
+| `/wiki-view export html` | Export as self-contained HTML |
+| `/wiki-view export md` | Export as single markdown bundle |
+| `/wiki-view export json` | Export as JSON knowledge graph |
+| `/wiki-view artifacts <type>` | Generate study guide, timeline, glossary, or comparison |
 
 ## Architecture
 
@@ -211,16 +275,43 @@ updated: 2025-01-15
 
 Start with `/wiki-serve` — opens at `localhost:8420`:
 
-- **Home** — recent pages, quick stats, search
-- **Page view** — rendered markdown with backlinks sidebar, annotations
-- **Editor** — split-pane markdown + live preview with AI assist toolbar
-- **Knowledge graph** — interactive Cytoscape.js visualization with layout options
-- **Canvas** — spatial whiteboard for arranging pages
-- **Search** — full-text search with snippets
-- **Stats** — page count, type/confidence distributions
-- **Gaps** — content gap analysis dashboard
-- **Review** — spaced repetition flashcard interface
-- **Research dashboard** — background research task queue
+- **Home** — recent pages, quick stats, search bar, active research tasks
+- **Page view** — rendered markdown with backlinks sidebar, source annotations, red-link detection
+- **Editor** — split-pane markdown + live preview with formatting toolbar and AI assist
+- **Knowledge graph** — interactive Cytoscape.js visualization with force-directed layouts, clustering, filtering
+- **Canvas** — spatial whiteboard for arranging pages visually
+- **Search** — TF-IDF full-text search with snippets and autocomplete
+- **Stats** — page counts, type/confidence distributions, freshness overview
+- **Gaps** — content gap analysis: missing pages, depth gaps, freshness gaps, structural holes
+- **Review** — FSRS-based spaced repetition flashcard interface
+- **Research dashboard** — background research task queue with SSE progress streaming
+- **Chat sidebar** — WebSocket-based RAG-augmented Q&A with cited answers
+
+### Custom Page Types
+
+Create templates in `.wiki/templates/<type-name>.md`:
+
+```yaml
+---
+title: "{{title}}"
+type: meeting-notes
+confidence: medium
+attendees: []
+date: "{{date}}"
+created: "{{created}}"
+updated: "{{updated}}"
+---
+
+# {{title}}
+
+## Attendees
+
+## Discussion
+
+## Action Items
+```
+
+Use with `/wiki-write` — the wiki-writer agent automatically applies templates based on the `type:` field.
 
 ## Agents
 
@@ -268,6 +359,44 @@ The plugin includes an MCP server exposing wiki operations:
 - [FastMCP](https://github.com/jlowin/fastmcp) — MCP server framework
 - [FastAPI](https://fastapi.tiangolo.com/) — web server framework
 - [markdown-it](https://github.com/markdown-it/markdown-it) — markdown rendering
+
+## Rules (Always-On Behavior)
+
+The plugin includes two always-active rule files that govern behavior:
+
+### Write Rules (`rules/wiki-integration.md`)
+
+**Write to the wiki when:**
+- You research any topic — save findings as a wiki page
+- You generate analysis, comparisons, or summaries worth keeping  
+- You solve non-trivial problems — save the solution pattern
+- The user shares ideas, plans, decisions, or requirements
+- You discover facts, relationships, or patterns during work
+- The user says "save this", "remember this", "note this"
+
+**Read from the wiki when:**
+- The user asks about a topic — check wiki FIRST before web search
+- You need context about the project, its decisions, or history
+- You're about to research something — check if wiki already covers it
+
+### Workflow Rules (`rules/workflow.md`)
+
+- **Ingest is autonomous** — never pause for user confirmation
+- **Contradictions are flagged** — note both views, never silently overwrite
+- **Backlinks are mandatory** — update `related:` fields on connected pages
+- **Complete frontmatter required** — every page needs title, type, confidence, created, updated
+- **Auto-init** — create `.wiki/` automatically if it doesn't exist
+- **Freshness-aware** — 9-tier staleness system governs when content needs refresh
+
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| No wiki found | Run any `/wiki-*` command — `.wiki/` auto-creates |
+| Web UI won't start | Check port 8420 availability; run `/wiki-serve stop` then retry |
+| Search returns no results | Run `/wiki-maintain` to rebuild indexes |
+| Broken links | Run `/wiki-maintain lint` to auto-fix |
+| Stale content | Run `/wiki-write --refresh-stale` to update old pages |
 
 ## License
 

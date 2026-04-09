@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""citation_graph.py — Removed.
+"""citation_graph.py — Build and query citation graphs via academic APIs.
 
-Citation graph building via external APIs (Semantic Scholar, OpenAlex) has
-been removed from LLM-Wiki. Use Claude's built-in web search instead.
+Uses Semantic Scholar and OpenAlex to trace forward/backward citations and
+snowball through citation chains. Stores results in SQLite for reuse.
 """
 
 import argparse

@@ -2,15 +2,15 @@
 
 **A skill that starts a local web server presenting the LLM Wiki as a browsable, Wikipedia-style website with real-time background research, dynamic page creation, and an integrated chat sidebar.**
 
-*Architecture Plan — April 7, 2026*
+*Architecture Plan — April 7, 2026 · Last updated: April 10, 2026*
 
 ---
 
 ## 1. What This Is
 
-A single command (`/wiki-serve`) that launches a local web server (default `http://localhost:8420`) turning the existing CScratch wiki (`state/wiki/wiki/pages/`) into a live, browsable website. The server isn't just a static renderer — it orchestrates background research agents so the wiki grows as the user explores it.
+A single command (`/wiki-serve`) that launches a local web server (default `http://localhost:8420`) turning the existing CScratch wiki (`.wiki/pages/`) into a live, browsable website. The server isn't just a static renderer — it orchestrates background research agents so the wiki grows as the user explores it.
 
-**The user experience:** You open the wiki in your browser. You see existing pages rendered beautifully in Wikipedia style. You click a link to a page that doesn't exist yet — instead of a 404, you see a "Researching..." page with a live progress bar. In the background, a `claude -p` subprocess is running `/wiki-ingest` to research that topic. When it finishes (usually 15-60 seconds), the page auto-refreshes with the new content. You can also search for anything from the search bar, click "Expand" buttons on sections to trigger deeper research, and chat with Claude in a persistent sidebar that stays visible across page changes.
+**The user experience:** You open the wiki in your browser. You see existing pages rendered beautifully in Wikipedia style. You click a link to a page that doesn't exist yet — instead of a 404, you see a "Researching..." page with a live progress bar. In the background, a `claude -p` subprocess is running `/wiki-write` to research that topic. When it finishes (usually 15-60 seconds), the page auto-refreshes with the new content. You can also search for anything from the search bar, click "Expand" buttons on sections to trigger deeper research, and chat with Claude in a persistent sidebar that stays visible across page changes.
 
 ---
 
@@ -46,7 +46,7 @@ A single command (`/wiki-serve`) that launches a local web server (default `http
 │    WS   /ws/chat              → Chat subprocess bridge          │
 │                                                                  │
 │  Internals:                                                      │
-│    WikiStore     → reads/indexes state/wiki/wiki/pages/*.md     │
+│    WikiStore     → reads/indexes .wiki/pages/*.md     │
 │    ResearchQueue → SQLite queue of pending research tasks       │
 │    ChatManager   → Claude CLI subprocess lifecycle              │
 └────────────────────────┬────────────────────────────────────────┘
@@ -56,7 +56,7 @@ A single command (`/wiki-serve`) that launches a local web server (default `http
 │                                                                  │
 │  Each worker:                                                    │
 │    1. Picks a task from ResearchQueue                            │
-│    2. Spawns: claude -p "research <topic> and wiki-ingest it"   │
+│    2. Spawns: claude -p "research <topic> and /wiki-write it"   │
 │    3. Streams progress → SSE to browser                         │
 │    4. On completion: WikiStore re-indexes, notifies frontend    │
 │                                                                  │
@@ -75,7 +75,7 @@ A single command (`/wiki-serve`) that launches a local web server (default `http
 
 ### 3.1 WikiStore — The Data Layer
 
-Reads the existing wiki on disk. No separate database for page content — the markdown files in `state/wiki/wiki/pages/` ARE the source of truth (matching the existing wiki architecture).
+Reads the existing wiki on disk. No separate database for page content — the markdown files in `.wiki/pages/` ARE the source of truth (matching the existing wiki architecture).
 
 **Responsibilities:**
 - Parse frontmatter + markdown for all pages on startup
@@ -130,9 +130,9 @@ A thread pool (default 2 workers) that processes the research queue.
 ```bash
 claude -p "You are a wiki research agent. Research the topic '<topic>' thoroughly.
 Use web search, find authoritative sources. Then create a wiki page at
-state/wiki/wiki/pages/<slug>.md following the wiki page format with frontmatter
+.wiki/pages/<slug>.md following the wiki page format with frontmatter
 (type, title, confidence, sources, related). Include [[wiki-links]] to related
-concepts. Update state/wiki/wiki/index.md. Be comprehensive but concise." \
+concepts. Update .wiki/index.md. Be comprehensive but concise." \
 --allowedTools "WebSearch,WebFetch,Read,Write,Edit" \
 --max-tokens 8000
 ```
@@ -140,9 +140,9 @@ concepts. Update state/wiki/wiki/index.md. Be comprehensive but concise." \
 Actually — better to delegate to the existing wiki skills. The research worker should invoke the existing agents:
 
 ```bash
-# Option A: Use search-orchestrator → wiki-ingest pipeline
+# Option A: Use search-orchestrator → /wiki-write pipeline
 claude -p "Research '<topic>' comprehensively using web search, then run
-/wiki-ingest with the findings. Create the page at <slug>.md." \
+//wiki-write with the findings. Create the page at <slug>.md." \
 --allowedTools "WebSearch,WebFetch,Read,Write,Edit,Bash"
 
 # Option B: Use autoresearch for deeper topics
@@ -152,7 +152,7 @@ claude -p "Run an autoresearch loop on '<topic>'. Max 2 iterations." \
 
 **For `section_expand` tasks:**
 ```bash
-claude -p "Read the wiki page at state/wiki/wiki/pages/<slug>.md.
+claude -p "Read the wiki page at .wiki/pages/<slug>.md.
 Find the section '<heading>'. Research that specific subtopic in much
 greater depth. Expand the section with detailed findings, preserving
 the page structure. Add new [[wiki-links]] for concepts discovered." \
@@ -319,24 +319,37 @@ Browser: Renders response in chat sidebar with markdown formatting
 wiki-serve/
 ├── SKILL.md                        # Skill definition and instructions
 ├── scripts/
+│   ├── __init__.py                 # Package marker
 │   ├── server.py                   # FastAPI app — routes, SSE, WebSocket
 │   ├── wiki_store.py               # WikiStore — file reading, indexing, search
 │   ├── research_queue.py           # ResearchQueue — SQLite task queue
 │   ├── research_worker.py          # Background worker thread pool
 │   ├── chat_manager.py             # Claude CLI subprocess + WebSocket bridge
 │   ├── markdown_renderer.py        # Markdown → HTML with wiki link transforms
+│   ├── rag_handler.py              # RAG context augmentation for chat
 │   └── requirements.txt            # fastapi, uvicorn, markdown-it-py, etc.
 ├── templates/
 │   ├── base.html                   # Wikipedia-style base layout + chat sidebar
-│   ├── page.html                   # Wiki page template
-│   ├── researching.html            # Research-in-progress page
-│   ├── search.html                 # Search results
 │   ├── home.html                   # Portal / main page
+│   ├── page.html                   # Wiki page template
+│   ├── search.html                 # Search results
+│   ├── edit.html                   # Split-pane markdown editor with live preview
+│   ├── create.html                 # New page creation
+│   ├── graph.html                  # Interactive Cytoscape.js knowledge graph
+│   ├── canvas.html                 # Spatial whiteboard for page arrangement
+│   ├── stats.html                  # Wiki statistics dashboard
+│   ├── gaps.html                   # Content gap analysis dashboard
+│   ├── history.html                # Git-backed page history with diffs
+│   ├── recent.html                 # Recently modified pages
+│   ├── review.html                 # FSRS spaced repetition flashcard interface
+│   ├── research_dashboard.html     # Background research task queue
+│   ├── researching.html            # Research-in-progress page
 │   └── error.html                  # Error page
 ├── static/
-│   ├── style.css                   # Wikipedia-inspired stylesheet
+│   ├── style.css                   # Wikipedia-inspired stylesheet (4 themes)
 │   ├── wiki.js                     # Page logic (expand, search, SSE, navigation)
-│   └── chat.js                     # Chat sidebar WebSocket logic
+│   ├── chat.js                     # Chat sidebar WebSocket logic
+│   └── editor.js                   # Split-pane editor logic
 └── references/
     └── architecture.md             # This document
 ```
@@ -375,9 +388,9 @@ websockets>=12.0
 
 When the skill is invoked (`/wiki-serve`):
 
-1. **Check prerequisites:** `state/wiki/SCHEMA.md` exists (wiki initialized). If not, prompt to run `/wiki-init` first.
+1. **Check prerequisites:** `.wiki/SCHEMA.md` exists (wiki initialized). If not, auto-create `.wiki/` directory structure.
 2. **Install dependencies:** `pip install -r requirements.txt` (if not already installed)
-3. **Initialize WikiStore:** Scan `state/wiki/wiki/pages/*.md`, build SQLite index
+3. **Initialize WikiStore:** Scan `.wiki/pages/*.md`, build SQLite index
 4. **Seed research queue:** Find all `[[slug]]` links pointing to non-existent pages → enqueue as low-priority `page_create` tasks
 5. **Start research workers:** 2 background threads begin processing queue
 6. **Start web server:** Uvicorn on `localhost:8420`
@@ -392,11 +405,11 @@ The server runs in the foreground. The skill keeps the process alive until Ctrl+
 
 This skill is a **read-heavy, write-through** layer on top of the existing wiki:
 
-- **Reads from:** `state/wiki/wiki/pages/*.md`, `state/wiki/wiki/index.md`, `state/wiki/wiki/log.md`
-- **Writes via:** Spawned `claude -p` subprocesses that use the existing wiki-ingest and wiki-update agents — NOT direct writes. This ensures all wiki conventions (frontmatter format, index updates, log entries) are maintained.
+- **Reads from:** `.wiki/pages/*.md`, `.wiki/index.md`, `.wiki/log.md`
+- **Writes via:** Spawned `claude -p` subprocesses that use the existing /wiki-write and wiki-update agents — NOT direct writes. This ensures all wiki conventions (frontmatter format, index updates, log entries) are maintained.
 - **Search index:** Ephemeral SQLite db in `/tmp/wiki-serve-cache.db` — rebuilt on startup, not committed
 
-The existing CLI workflow (`/wiki`, `/wiki-query`, `/wiki-ingest`, etc.) continues to work alongside the web UI. Changes made via CLI are picked up by the file watcher and reflected in the browser.
+The existing CLI workflow (`/wiki-write`, `/wiki-read`, `/wiki-view`, etc.) continues to work alongside the web UI. Changes made via CLI are picked up by the file watcher and reflected in the browser.
 
 ---
 
@@ -416,12 +429,20 @@ The existing CLI workflow (`/wiki`, `/wiki-query`, `/wiki-ingest`, etc.) continu
 
 ---
 
-## 10. Future Enhancements (Not in v1)
+## 10. Enhancement Status
 
-- **Collaborative editing:** Edit pages directly in the browser (contenteditable + save)
-- **Graph view:** D3.js visualization of page links (like Obsidian's graph view)
-- **History:** Git-backed page history viewer with diffs
-- **Export:** One-click export to PDF, static site, or single markdown file
-- **Themes:** Dark mode, reader mode, print mode
+**Now implemented:**
+- **Split-pane editor** (`edit.html` + `editor.js`) — markdown editing with live preview and AI assist toolbar
+- **Knowledge graph** (`graph.html`) — interactive Cytoscape.js visualization with multiple layouts
+- **Canvas view** (`canvas.html`) — spatial whiteboard for page arrangement
+- **Page history** (`history.html`) — git-backed history viewer with diffs
+- **Export** (`/wiki-view export`) — HTML, markdown, and JSON knowledge graph export
+- **4 themes** (light, dark, terminal, wikipedia) — CSS variable-based theming with localStorage persistence
+- **Research dashboard** (`research_dashboard.html`) — task queue visualization and management
+- **Spaced repetition** (`review.html`) — FSRS-based flashcard review interface
+- **Stats dashboard** (`stats.html`) — page count, type/confidence distributions
+- **Content gap analysis** (`gaps.html`) — structural, depth, and freshness gap detection
+
+**Remaining future ideas:**
 - **Multi-user:** Authentication + concurrent editing
-- **Research dashboard:** Queue visualization, worker status, research statistics
+- **PDF export:** One-click export to PDF

@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>LLM-Wiki — Complete User &amp; Technical Guide</title>
+<meta name="description" content="Complete documentation for LLM-Wiki: an autonomous knowledge base plugin for Claude Code with semantic search, web research, and Wikipedia-style web UI.">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
@@ -35,6 +36,15 @@ h1,h2,h3,h4 { font-family:'Fraunces',Georgia,serif; font-weight:700; line-height
 .header-right a { font-size:13px; color:var(--text-muted); text-decoration:none; }
 .header-right a:hover { color:var(--accent); }
 .version-tag { font-size:11px; background:var(--bg-alt); border:1px solid var(--border); padding:2px 8px; border-radius:4px; color:var(--text-muted); }
+.print-only { display:none; }
+@media print {
+  .sidebar, .header { display:none; }
+  .main { margin-left:0; margin-top:0; padding:20px; max-width:none; }
+  .print-only { display:block; }
+  body { font-size:12pt; line-height:1.5; }
+  .card { break-inside:avoid; box-shadow:none; border:1px solid #ddd; }
+  .code-block { background:#f5f5f5; color:#333; break-inside:avoid; }
+}
 .sidebar { position:fixed; top:var(--header-h); left:0; bottom:0; width:var(--sidebar-w);
   background:var(--bg-card); border-right:1px solid var(--border); overflow-y:auto; padding:16px 0; z-index:90; transition:transform .2s; }
 .sidebar::-webkit-scrollbar { width:4px; } .sidebar::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
@@ -136,6 +146,7 @@ const NAV = [
     {id:"architecture",icon:"layers",label:"System Architecture"},
     {id:"data-model",icon:"database",label:"Data Model"},
     {id:"mcp",icon:"cpu",label:"MCP Server"},
+    {id:"research",icon:"search",label:"Research Engine"},
   ]},
   {group:"User Guide", items:[
     {id:"skills",icon:"terminal",label:"Skills (Commands)"},
@@ -143,9 +154,14 @@ const NAV = [
     {id:"webui",icon:"monitor",label:"Web UI"},
     {id:"cli",icon:"wrench",label:"CLI Utilities"},
   ]},
+  {group:"Advanced", items:[
+    {id:"custom-types",icon:"layers",label:"Custom Page Types"},
+    {id:"rules",icon:"shield",label:"Rules & Behavior"},
+  ]},
   {group:"Technical Reference", items:[
     {id:"search",icon:"search",label:"Search & Retrieval"},
     {id:"quality",icon:"shield",label:"Quality & Provenance"},
+    {id:"troubleshooting",icon:"wrench",label:"Troubleshooting"},
     {id:"deps",icon:"pkg",label:"Dependencies"},
   ]},
 ];
@@ -177,34 +193,39 @@ const AGENTS = [
   {name:"wiki-writer",desc:"Creates and updates wiki pages. Both ingest and update modes are fully autonomous. Handles slug generation, frontmatter creation, contradiction detection, backlink cascading, and concurrent write safety via lock files. Supports custom page type templates from .wiki/templates/.",trigger:"Any write operation to the wiki",color:"#0f766e"},
   {name:"wiki-reader",desc:"Answers questions from wiki knowledge. Navigates via index.md, supports quick/standard/deep depth modes. Uses TF-IDF full-text search for ranked results. Cites via [[slug]] references and presents contradictions explicitly.",trigger:"Any question that might be answered by wiki content",color:"#0284c7"},
   {name:"wiki-auditor",desc:"Audits wiki health inline. Scans all pages for broken links, missing frontmatter, orphan pages, near-duplicates (Jaccard >60%), and dead index entries. Applies fixes directly to files.",trigger:"/wiki-maintain command or periodic health checks",color:"#ea580c"},
+  {name:"backlink-manager",desc:"Maintains the bidirectional backlink index. Updates 'related' fields automatically, detects unlinked mentions of page titles across the wiki, and ensures link consistency when pages are renamed or deleted.",trigger:"After any page write or rename operation",color:"#16a34a"},
   {name:"search-orchestrator",desc:"Orchestrates multi-channel search. Classifies research complexity (simple/moderate/complex), checks existing wiki coverage, generates diverse query variants, fans out to channel subagents, and merges/deduplicates results by URL, DOI, and title similarity.",trigger:"Research fallback during /wiki-read when wiki lacks coverage",color:"#7c3aed"},
   {name:"search-channel",desc:"Executes parameterized searches for a specific channel type (web, docs). Each channel has its own fetch logic, caching TTL, and result normalization. Returns standardized {title, url, snippet, source_type, credibility_tier} objects.",trigger:"Called by search-orchestrator for each channel",color:"#6366f1"},
   {name:"research-loop",desc:"Runs autonomous iterative research (max 3 iterations). Each iteration: creates checkpoint, generates hypotheses, launches search-orchestrator, ingests via wiki-writer, evaluates quality metrics, and keeps or discards based on improvement. Stops early if metrics plateau.",trigger:"Deep research mode during /wiki-read deep",color:"#9333ea"},
-  {name:"research-processor",desc:"Post-processes parallel research results from search-orchestrator. Two modes: condense (extract findings, deduplicate, score confidence, detect stale) and deduplicate (merge by URL, DOI, title similarity >85%, content hash). Ranks by credibility \u00d7 corroboration \u00d7 recency.",trigger:"Called by search-orchestrator after channel results are collected",color:"#a855f7"},
+  {name:"research-processor",desc:"Post-processes parallel research results from search-orchestrator. Two modes: condense (extract findings, deduplicate, score confidence, detect stale) and deduplicate (merge by URL, DOI, title similarity >85%, content hash). Ranks by credibility × corroboration × recency.",trigger:"Called by search-orchestrator after channel results are collected",color:"#a855f7"},
   {name:"fact-checker",desc:"Verifies factual claims against external sources. Extracts verifiable claims (numbers, dates, entities, comparisons), verifies each via WebSearch (max 3 searches/claim, 10 claims/page). Assigns status: verified, unverified, disputed, or outdated.",trigger:"/wiki-maintain fact-check or during deep-dive research iterations",color:"#dc2626"},
-  {name:"citation-explorer",desc:"Explores citation chains for a topic. Uses web search to trace citation relationships, identifies key papers by citation count, recency, and relevance. Recommends top 5\u201310 papers for wiki ingestion.",trigger:"During deep-dive research iterations when citation chains are relevant",color:"#0891b2"},
+  {name:"citation-explorer",desc:"Explores citation chains for a topic. Uses web search to trace citation relationships, identifies key papers by citation count, recency, and relevance. Recommends top 5–10 papers for wiki ingestion.",trigger:"During deep-dive research iterations when citation chains are relevant",color:"#0891b2"},
 ];
 
 const CLI_UTILS = [
-  {name:"backlinks.py",desc:"SQLite-backed backlink index \u2014 build, query, verify bidirectional consistency, detect broken links and orphans"},
+  {name:"backlinks.py",desc:"SQLite-backed backlink index — build, query, verify bidirectional consistency, detect broken links and orphans"},
   {name:"cache.py",desc:"2-layer search cache with channel-specific TTLs (web:7d, docs:7d), stale-while-revalidate, adaptive TTL"},
-  {name:"circuit_breaker.py",desc:"Circuit breaker for external APIs \u2014 closed\u2192open\u2192half-open states, 5-failure threshold, 300s cooldown"},
-  {name:"claims.py",desc:"Claim extraction & verification tracking \u2014 quantitative, entity, comparative claim types with status lifecycle"},
-  {name:"daily.py",desc:"Daily notes & journal \u2014 templated daily pages, weekly rollup summaries, date-range search"},
-  {name:"diff.py",desc:"Structured wiki page diffs \u2014 frontmatter, sections, links comparison with JSON/markdown/HTML output"},
-  {name:"exceptions.py",desc:"Custom exception hierarchy \u2014 WikiError base class with FetchError, CacheError, SearchError, PageNotFoundError, etc."},
-  {name:"export.py",desc:"Multi-format export \u2014 self-contained HTML with navigation, Markdown with TOC, JSON knowledge graph"},
-  {name:"fetch.py",desc:"URL fetching with extraction chain: Jina Reader \u2192 Trafilatura \u2192 raw HTML fallback, markdown conversion"},
-  {name:"flashcards.py",desc:"FSRS-based spaced repetition \u2014 question/definition/takeaway cards, difficulty + stability tracking, due scheduling"},
-  {name:"gaps.py",desc:"Multi-dimensional gap analysis \u2014 structural holes, depth gaps, freshness gaps, missing pages, isolated nodes"},
-  {name:"mentions.py",desc:"Unlinked mention detection \u2014 case-insensitive title scanning across all pages with context and line numbers"},
-  {name:"provenance.py",desc:"W3C PROV-inspired provenance \u2014 activities, entities, derivations with full chain tracing and graph export"},
-  {name:"query.py",desc:"Frontmatter query engine \u2014 Dataview-like SELECT/COUNT/LIST syntax for querying wiki page metadata"},
-  {name:"rag.py",desc:"RAG pipeline \u2014 TF-IDF full-text search with section chunking, citation-grounded Q&A prompts"},
-  {name:"search-fulltext.py",desc:"TF-IDF full-text search \u2014 in-memory index, stop word filtering, title/paragraph boosts, snippet extraction"},
-  {name:"tools.py",desc:"Deterministic utilities replacing LLM calls \u2014 slug dedup, similarity scoring, summarization to save tokens"},
+  {name:"circuit_breaker.py",desc:"Circuit breaker for external APIs — closed→open→half-open states, 5-failure threshold, 300s cooldown"},
+  {name:"citation_graph.py",desc:"Academic citation graph construction — snowball from seed papers, PageRank-style influence scoring, graph export"},
+  {name:"claims.py",desc:"Claim extraction & verification tracking — quantitative, entity, comparative claim types with status lifecycle"},
+  {name:"daily.py",desc:"Daily notes & journal — templated daily pages, weekly rollup summaries, date-range search"},
+  {name:"diff.py",desc:"Structured wiki page diffs — frontmatter, sections, links comparison with JSON/markdown/HTML output"},
+  {name:"exceptions.py",desc:"Custom exception hierarchy — WikiError base class with FetchError, CacheError, SearchError, PageNotFoundError, etc."},
+  {name:"export.py",desc:"Multi-format export — self-contained HTML with navigation, Markdown with TOC, JSON knowledge graph"},
+  {name:"fetch.py",desc:"URL fetching with extraction chain: Jina Reader → Trafilatura → raw HTML fallback, markdown conversion"},
+  {name:"flashcards.py",desc:"FSRS-based spaced repetition — question/definition/takeaway cards, difficulty + stability tracking, due scheduling"},
+  {name:"gaps.py",desc:"Multi-dimensional gap analysis — structural holes, depth gaps, freshness gaps, missing pages, isolated nodes"},
+  {name:"mentions.py",desc:"Unlinked mention detection — case-insensitive title scanning across all pages with context and line numbers"},
+  {name:"provenance.py",desc:"W3C PROV-inspired provenance — activities, entities, derivations with full chain tracing and graph export"},
+  {name:"query.py",desc:"Frontmatter query engine — Dataview-like SELECT/COUNT/LIST syntax for querying wiki page metadata"},
+  {name:"rag.py",desc:"RAG pipeline — TF-IDF full-text search with section chunking, citation-grounded Q&A prompts"},
+  {name:"search-academic.py",desc:"Academic paper search — arXiv, Semantic Scholar, PubMed APIs with metadata extraction and PDF downloading"},
+  {name:"search-code.py",desc:"Code search across repositories — GitHub, GitLab, Bitbucket with file type filtering and snippet extraction"},
+  {name:"search-fulltext.py",desc:"TF-IDF full-text search — in-memory index, stop word filtering, title/paragraph boosts, snippet extraction"},
+  {name:"search-wikipedia.py",desc:"Wikipedia article search — MediaWiki Action API integration with disambiguation handling"},
+  {name:"tools.py",desc:"Deterministic utilities replacing LLM calls — slug dedup, similarity scoring, summarization to save tokens"},
   {name:"wiki_git.py",desc:"Activity logging with attribution and history tracking"},
-  {name:"wiki_logging.py",desc:"Shared logging configuration \u2014 structured JSON or colored text output, configurable via WIKI_LOG_LEVEL / WIKI_LOG_FORMAT"},
+  {name:"wiki_logging.py",desc:"Shared logging configuration — structured JSON or colored text output, configurable via WIKI_LOG_LEVEL / WIKI_LOG_FORMAT"},
 ];
 
 const MCP_TOOLS = [
@@ -267,7 +288,7 @@ function ArchDiagram() {
         <text x={x+(l.length>10?60:50)} y="88" textAnchor="middle" fontSize="11" fill="#166534">{l}</text></React.Fragment>)}
       <line x1="410" y1="104" x2="410" y2="130" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arrow)"/>
       <rect x="20" y="130" width="780" height="100" rx="8" fill="#eff6ff" stroke="#93c5fd" strokeWidth="1.5"/>
-      <text x="40" y="151" fontSize="10" fontWeight="600" fill="#1e40af" letterSpacing=".06em">AGENT LAYER \u2014 9 Autonomous Agents</text>
+      <text x="40" y="151" fontSize="10" fontWeight="600" fill="#1e40af" letterSpacing=".06em">AGENT LAYER — 10 Autonomous Agents</text>
       {[["wiki-writer",40],["wiki-reader",158],["wiki-auditor",276],["search-orch.",394],["search-channel",512]].map(([l,x])=>
         <React.Fragment key={l}><rect x={x} y="160" width="108" height="24" rx="4" fill="#fff" stroke="#93c5fd"/>
         <text x={x+54} y="176" textAnchor="middle" fontSize="10" fill="#1e40af">{l}</text></React.Fragment>)}
@@ -385,12 +406,67 @@ function App() {
           <div className="card"><strong>3. Wiki serves you</strong><p className="card-desc" style={{marginTop:4}}>Claude checks the wiki first when you ask questions, citing existing knowledge with <code>[[slug]]</code> references before searching the web.</p></div>
           <div className="card"><strong>4. Wiki maintains itself</strong><p className="card-desc" style={{marginTop:4}}>Periodic lint, deduplication, confidence upgrades, stale detection, and gap analysis keep the knowledge base healthy.</p></div>
         </div>
-        <h3 style={{marginTop:24,marginBottom:12}}>Capabilities</h3>
-        <div className="table-wrap"><table><thead><tr><th>Category</th><th>Features</th></tr></thead><tbody>
-          <tr><td><Badge color="green">Knowledge</Badge></td><td>Auto-capture, TF-IDF full-text search, block references, backlinks, frontmatter queries, custom page types</td></tr>
-          <tr><td><Badge color="blue">Research</Badge></td><td>Web search, autonomous research loops, fact-checking, provenance</td></tr>
-          <tr><td><Badge color="amber">Web UI</Badge></td><td>4 themes, Cytoscape.js knowledge graph, canvas view, split editor, WebSocket chat, FSRS review</td></tr>
-          <tr><td><Badge color="teal">Maintenance</Badge></td><td>Auto-lint, dedup, confidence upgrades, daily notes, structured logging, circuit breakers</td></tr>
+        <h3 style={{marginTop:24,marginBottom:12}}>Core Capabilities</h3>
+        <div className="grid-2">
+          <div className="card">
+            <div className="card-header"><div className="card-icon" style={{background:'#f0fdf4'}}>🧠</div><div className="card-title">Knowledge Management</div></div>
+            <div className="card-desc">
+              <ul style={{marginLeft:16,lineHeight:1.7}}>
+                <li><strong>Auto-capture</strong> — saves research, ideas, decisions as you work</li>
+                <li><strong>TF-IDF search</strong> — full-text search with content-aware scoring</li>
+                <li><strong>Wiki-links</strong> — <code>[[slug]]</code> references with bidirectional backlinks</li>
+                <li><strong>Block references</strong> — <code>[[slug#heading]]</code> section links</li>
+                <li><strong>Frontmatter queries</strong> — Dataview-like metadata queries</li>
+                <li><strong>10 page types</strong> — concept, idea, brainstorming, status, rules, config, skill, memory, reference, custom</li>
+              </ul>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-header"><div className="card-icon" style={{background:'#eff6ff'}}>🔬</div><div className="card-title">Research-on-Miss</div></div>
+            <div className="card-desc">
+              <ul style={{marginLeft:16,lineHeight:1.7}}>
+                <li><strong>Wiki-first retrieval</strong> — checks wiki before web search</li>
+                <li><strong>Automatic research</strong> — researches and ingests when knowledge is missing</li>
+                <li><strong>Tool discovery</strong> — works with available tools (WebSearch, MCP, Context7)</li>
+                <li><strong>Multi-channel</strong> — web, academic, code, docs search channels</li>
+                <li><strong>Fact-checking</strong> — verifies claims against external sources</li>
+                <li><strong>Citation explorer</strong> — snowballs through academic citation graphs</li>
+              </ul>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-header"><div className="card-icon" style={{background:'#fef3c7'}}>🌐</div><div className="card-title">Web UI</div></div>
+            <div className="card-desc">
+              <ul style={{marginLeft:16,lineHeight:1.7}}>
+                <li><strong>4 themes</strong> — light, dark, terminal, wikipedia</li>
+                <li><strong>Knowledge graph</strong> — interactive Cytoscape.js visualization</li>
+                <li><strong>Canvas view</strong> — spatial whiteboard for page arrangement</li>
+                <li><strong>Split editor</strong> — live markdown preview with AI assist</li>
+                <li><strong>WebSocket chat</strong> — RAG-augmented Q&A sidebar</li>
+                <li><strong>FSRS review</strong> — spaced repetition flashcards</li>
+              </ul>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-header"><div className="card-icon" style={{background:'#f0f9ff'}}>🔧</div><div className="card-title">Self-Maintenance</div></div>
+            <div className="card-desc">
+              <ul style={{marginLeft:16,lineHeight:1.7}}>
+                <li><strong>Auto-lint</strong> — fixes broken links, missing frontmatter</li>
+                <li><strong>Deduplication</strong> — merges near-duplicate pages</li>
+                <li><strong>Confidence upgrades</strong> — promotes pages as sources accumulate</li>
+                <li><strong>Stale detection</strong> — 9-tier freshness tier system</li>
+                <li><strong>Gap analysis</strong> — identifies missing coverage</li>
+                <li><strong>Structured logging</strong> — configurable JSON/text output</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <h3 style={{marginTop:24,marginBottom:12}}>Integration Points</h3>
+        <div className="table-wrap"><table><thead><tr><th>Tool</th><th>Integration</th></tr></thead><tbody>
+          <tr><td><Badge color="blue">Obsidian</Badge></td><td>Open <code>.wiki/</code> as a vault for graph visualization and editing</td></tr>
+          <tr><td><Badge color="green">MCP</Badge></td><td>Any MCP-compatible client can call wiki tools via the MCP server</td></tr>
+          <tr><td><Badge color="amber">Git</Badge></td><td>Wiki changes tracked with auto-commit, attribution, and rollback</td></tr>
+          <tr><td><Badge color="gray">APIs</Badge></td><td>FastAPI web server with REST endpoints and WebSocket support</td></tr>
         </tbody></table></div>
       </section>
 
@@ -489,10 +565,10 @@ updated: "{{updated}}"
         <Expandable title="User Layer" defaultOpen={true}>
           <p style={{fontSize:14,color:'var(--text-muted)'}}>Users interact through five entry points. <strong>Claude Code</strong> is the primary interface where skills are invoked as slash commands and agents activate automatically. The <strong>Web UI</strong> at <code>localhost:8420</code> provides a visual browsable experience (only runs when invoked). <strong>MCP Clients</strong> can call wiki tools programmatically via the FastMCP server. <strong>Obsidian</strong> can open the <code>.wiki/</code> directory as a vault. The <strong>CLI</strong> allows direct script invocation.</p>
         </Expandable>
-        <Expandable title="Agent Layer — 9 Agents">
-          <p style={{fontSize:14,color:'var(--text-muted)'}}>Agents are Claude subprocesses defined as markdown prompts in <code>agents/</code>. They activate automatically based on context. The wiki-writer and wiki-reader handle CRUD operations. The search-orchestrator fans out research to search-channel subagents. The research-loop runs iterative deep-dives. The fact-checker and citation-explorer handle quality assurance. The wiki-auditor performs health maintenance. The research-processor deduplicates and condenses parallel results.</p>
+        <Expandable title="Agent Layer — 10 Agents">
+          <p style={{fontSize:14,color:'var(--text-muted)'}}>Agents are Claude subprocesses defined as markdown prompts in <code>agents/</code>. They activate automatically based on context. The wiki-writer and wiki-reader handle CRUD operations. The backlink-manager maintains link consistency. The search-orchestrator fans out research to search-channel subagents. The research-loop runs iterative deep-dives. The fact-checker and citation-explorer handle quality assurance. The wiki-auditor performs health maintenance. The research-processor deduplicates and condenses parallel results.</p>
         </Expandable>
-        <Expandable title="Utilities Layer — 18 CLI Scripts">
+        <Expandable title="Utilities Layer — 24 CLI Scripts">
           <p style={{fontSize:14,color:'var(--text-muted)'}}>The <code>bin/</code> directory contains Python scripts that handle deterministic operations without requiring LLM calls. These cover search (full-text TF-IDF, academic APIs, code registries), data management (backlinks, cache, embeddings), quality (claims, provenance), utilities (daily notes, diffs, export, flashcards), and infrastructure (structured logging, custom exceptions, circuit breakers). Agents call these scripts as tools during execution.</p>
         </Expandable>
         <Expandable title="Server Layer — MCP + FastAPI">
@@ -548,6 +624,99 @@ updated: 2026-04-08
   raw/            Immutable source materials (web, papers, code, transcripts)`}</CodeBlock>
       </section>
 
+      {/* CUSTOM PAGE TYPES */}
+      <section id="custom-types">
+        <h1 className="section-title">Custom Page Types</h1>
+        <p className="section-subtitle">Define your own page structures with templates in <code>.wiki/templates/</code>.</p>
+        <div className="card">
+          <div className="card-header"><div className="card-icon" style={{background:'#faf5ff'}}>📋</div><div><div className="card-title">Template System</div></div></div>
+          <div className="card-desc">Create reusable page structures by adding template files to <code>.wiki/templates/&lt;type-name&gt;.md</code>. When using <code>/wiki-write</code> with a custom type, the wiki-writer agent applies your template automatically.</div>
+        </div>
+        <h3 style={{marginTop:24,marginBottom:12}}>Creating a Template</h3>
+        <CodeBlock label=".wiki/templates/meeting-notes.md">{`---
+title: "{{title}}"
+type: meeting-notes
+confidence: medium
+attendees: []
+action_items: []
+date: "{{date}}"
+created: "{{created}}"
+updated: "{{updated}}"
+---
+
+# {{title}}
+
+## Attendees
+
+## Agenda
+
+## Discussion
+
+## Action Items
+
+## Decisions Made`}</CodeBlock>
+        <h3 style={{marginTop:24,marginBottom:12}}>Placeholder Variables</h3>
+        <div className="table-wrap"><table><thead><tr><th>Variable</th><th>Value</th></tr></thead><tbody>
+          <tr><td><code>{'{{title}}'}</code></td><td>Page title from user input or auto-generated</td></tr>
+          <tr><td><code>{'{{date}}'}</code></td><td>Current date (YYYY-MM-DD)</td></tr>
+          <tr><td><code>{'{{created}}'}</code></td><td>ISO 8601 creation timestamp</td></tr>
+          <tr><td><code>{'{{updated}}'}</code></td><td>ISO 8601 update timestamp</td></tr>
+        </tbody></table></div>
+        <h3 style={{marginTop:24,marginBottom:12}}>Built-in Types</h3>
+        <div className="grid-2">
+          {[{t:"concept",d:"Standard knowledge articles",e:"Research findings, explanations"},
+            {t:"idea",d:"Evaluated concepts",e:"Problem/solution with pros/cons"},
+            {t:"brainstorming",d:"Freeform ideation",e:"Themes, priorities, raw thoughts"},
+            {t:"status",d:"Dashboard pages",e:"Metrics, blockers, action items"},
+            {t:"rules",d:"Policies & guidelines",e:"Numbered rules with exceptions"},
+            {t:"config",d:"Settings reference",e:"Key-value pairs with defaults"},
+            {t:"skill",d:"Tool documentation",e:"Commands, usage examples"},
+            {t:"memory",d:"Persistent facts",e:"Key information to remember"}].map(x =>
+            <div key={x.t} className="card"><strong><code>{x.t}</code></strong><p className="card-desc" style={{marginTop:4}}>{x.d}</p><p style={{fontSize:12,color:'var(--text-light)',marginTop:4}}>Example: {x.e}</p></div>)}
+        </div>
+        <Callout type="info">Templates are optional — built-in types work out of the box. Use custom templates when you need specialized frontmatter fields or structured body content.</Callout>
+      </section>
+
+      {/* RULES */}
+      <section id="rules">
+        <h1 className="section-title">Rules & Behavior</h1>
+        <p className="section-subtitle">Always-on behavioral rules from <code>rules/</code> that govern wiki interactions.</p>
+        <h3 style={{marginTop:12,marginBottom:12}}>Integration Rules</h3>
+        <div className="card" style={{borderLeft:'4px solid #0f766e'}}>
+          <div className="card-header"><div className="card-icon" style={{background:'#f0fdf4',color:'#0f766e',fontSize:14,fontWeight:700}}>✍️</div><div className="card-title">When to Write</div></div>
+          <div className="card-desc">
+            <ul style={{marginLeft:20,lineHeight:1.8}}>
+              <li>You research any topic — save findings as a wiki page</li>
+              <li>You generate analysis, comparisons, or summaries worth keeping</li>
+              <li>You solve a non-trivial problem — save the solution pattern</li>
+              <li>The user shares ideas, plans, decisions, or requirements</li>
+              <li>You discover facts, relationships, or patterns during work</li>
+              <li>The user says "save this", "remember this", "note this"</li>
+            </ul>
+          </div>
+        </div>
+        <div className="card" style={{borderLeft:'4px solid #0284c7',marginTop:16}}>
+          <div className="card-header"><div className="card-icon" style={{background:'#f0f9ff',color:'#0284c7',fontSize:14,fontWeight:700}}>📖</div><div className="card-title">When to Read</div></div>
+          <div className="card-desc">
+            <ul style={{marginLeft:20,lineHeight:1.8}}>
+              <li>The user asks about a topic — check wiki <strong>first</strong> before web search</li>
+              <li>You need context about the project, its decisions, or history</li>
+              <li>You're about to research something — check if wiki already covers it</li>
+              <li>The user references a concept that might have a wiki page</li>
+            </ul>
+          </div>
+        </div>
+        <h3 style={{marginTop:24,marginBottom:12}}>Workflow Rules</h3>
+        <div className="table-wrap"><table><thead><tr><th>Rule</th><th>Description</th></tr></thead><tbody>
+          <tr><td><strong>Ingest is autonomous</strong></td><td>Never pause for user confirmation when creating/updating pages</td></tr>
+          <tr><td><strong>Contradictions are flagged</strong></td><td>Note both views explicitly, never silently overwrite</td></tr>
+          <tr><td><strong>Backlinks are mandatory</strong></td><td>Update <code>related:</code> fields on connected pages</td></tr>
+          <tr><td><strong>Complete frontmatter</strong></td><td>Every page needs title, type, confidence, created, updated</td></tr>
+          <tr><td><strong>Auto-init</strong></td><td>Create <code>.wiki/</code> automatically if it doesn't exist</td></tr>
+          <tr><td><strong>Freshness-aware</strong></td><td>9-tier staleness system governs refresh timing</td></tr>
+        </tbody></table></div>
+      </section>
+
       {/* MCP SERVER */}
       <section id="mcp">
         <h1 className="section-title">MCP Server</h1>
@@ -576,7 +745,7 @@ LIST sources FROM "transformer-architecture"`}</CodeBlock>
       {/* SKILLS */}
       <section id="skills">
         <h1 className="section-title">Skills (Commands)</h1>
-        <p className="section-subtitle">6 slash commands. Primary interface to LLM-Wiki.</p>
+        <p className="section-subtitle">5 slash commands. Primary interface to LLM-Wiki.</p>
         <div className="tabs">{SKILLS.map((s,i) => <div key={s.cmd} className={`tab ${skillTab===i?'active':''}`} onClick={()=>setSkillTab(i)}>{s.cmd}</div>)}</div>
         {(() => { const s = SKILLS[skillTab]; return <div className="card" style={{borderLeft:`4px solid ${s.color}`}}>
           <div className="card-header"><div><div className="card-title" style={{color:s.color}}>{s.cmd} {s.args && <span style={{fontWeight:400,color:'var(--text-muted)',fontSize:14}}>{s.args}</span>}</div>
@@ -649,7 +818,7 @@ LIST sources FROM "transformer-architecture"`}</CodeBlock>
       {/* CLI UTILITIES */}
       <section id="cli">
         <h1 className="section-title">CLI Utilities</h1>
-        <p className="section-subtitle">24 Python scripts in <code>bin/</code> providing deterministic operations.</p>
+        <p className="section-subtitle">23 Python scripts in <code>bin/</code> providing deterministic operations — from search and caching to quality control and export.</p>
         <div className="search-box"><span style={{color:'var(--text-light)'}}>🔍</span>
           <input placeholder="Filter utilities..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}/></div>
         <div className="table-wrap"><table><thead><tr><th>Script</th><th>Description</th></tr></thead><tbody>
@@ -737,9 +906,49 @@ LIST sources FROM "transformer-architecture"`}</CodeBlock>
         </div>)}
       </section>
 
+      {/* TROUBLESHOOTING */}
+      <section id="troubleshooting">
+        <h1 className="section-title">Troubleshooting</h1>
+        <p className="section-subtitle">Common issues and solutions.</p>
+        <div className="grid-2">
+          <div className="card">
+            <div className="card-header"><div className="card-icon" style={{background:'#fef2f2',color:'#dc2626'}}>❌</div><div className="card-title">No wiki found</div></div>
+            <div className="card-desc">Run any <code>/wiki-*</code> command — the <code>.wiki/</code> directory is created automatically on first use.</div>
+          </div>
+          <div className="card">
+            <div className="card-header"><div className="card-icon" style={{background:'#fef2f2',color:'#dc2626'}}>🌐</div><div className="card-title">Web UI won't start</div></div>
+            <div className="card-desc">Check if port 8420 is available. Run <code>/wiki-serve stop</code> then retry. Or use a different port: <code>python skills/serve/scripts/server.py --port 8080</code></div>
+          </div>
+          <div className="card">
+            <div className="card-header"><div className="card-icon" style={{background:'#fffbeb',color:'#d97706'}}>🔍</div><div className="card-title">Search returns no results</div></div>
+            <div className="card-desc">Run <code>/wiki-maintain</code> to rebuild search indexes and regenerate <code>index.md</code>.</div>
+          </div>
+          <div className="card">
+            <div className="card-header"><div className="card-icon" style={{background:'#fffbeb',color:'#d97706'}}>🔗</div><div className="card-title">Broken links</div></div>
+            <div className="card-desc">Run <code>/wiki-maintain lint</code> to auto-detect and fix broken <code>[[wiki-links]]</code> and orphaned pages.</div>
+          </div>
+          <div className="card">
+            <div className="card-header"><div className="card-icon" style={{background:'#eff6ff',color:'#0284c7'}}>⏰</div><div className="card-title">Stale content</div></div>
+            <div className="card-desc">Run <code>/wiki-write --refresh-stale</code> to find and update pages past their freshness tier TTL.</div>
+          </div>
+          <div className="card">
+            <div className="card-header"><div className="card-icon" style={{background:'#f0fdf4',color:'#16a34a'}}>📦</div><div className="card-title">Missing dependencies</div></div>
+            <div className="card-desc">Install requirements: <code>pip install -r requirements.txt</code>. For semantic search: <code>pip install sentence-transformers numpy sqlite-vec</code></div>
+          </div>
+        </div>
+        <h3 style={{marginTop:24,marginBottom:12}}>Getting Help</h3>
+        <div className="card">
+          <div className="card-desc">
+            <p><strong>GitHub Issues:</strong> <a href="https://github.com/Oshayr/llm-wiki/issues" target="_blank" rel="noopener">github.com/Oshayr/llm-wiki/issues</a></p>
+            <p style={{marginTop:8}}><strong>Logs:</strong> Set <code>WIKI_LOG_LEVEL=DEBUG</code> for verbose output. Set <code>WIKI_LOG_FORMAT=json</code> for structured logging.</p>
+            <p style={{marginTop:8}}><strong>Check wiki health:</strong> Run <code>/wiki-view stats</code> for page counts, confidence distribution, and freshness overview.</p>
+          </div>
+        </div>
+      </section>
+
       {/* SOURCES */}
       <section style={{borderTop:'1px solid var(--border)',paddingTop:24}}>
-        <h3 style={{marginBottom:12}}>Sources</h3>
+        <h3 style={{marginBottom:12}}>Sources & References</h3>
         <div style={{fontSize:13,color:'var(--text-muted)',lineHeight:2}}>
           <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f" target="_blank" rel="noopener">Andrej Karpathy — LLM Wiki Gist</a><br/>
           <a href="https://code.claude.com/docs/en/plugins" target="_blank" rel="noopener">Claude Code Plugin Documentation</a><br/>

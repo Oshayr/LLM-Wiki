@@ -32,8 +32,30 @@ Execute search queries for a specific channel type. The caller specifies the cha
 Use for: factual/encyclopedic topics — history, science, biographies, concepts, geography, technology overviews.
 Avoid for: very recent events (Wikipedia lags real-time), niche technical code questions.
 
+### academic
+1. Check search cache first: `python3 bin/cache.py check academic "<query>"`
+2. Use `python3 bin/search-academic.py search "<query>" --top 5`
+3. Optionally pass `--year-min` / `--year-max` for date filtering
+4. Save results to cache: `python3 bin/cache.py store academic "<query>" "<results_json>"`
+5. Return normalized results: {title, url, snippet, source_type: "academic", credibility_tier: 1, year, authors, doi}
+
+Use for: research papers, scientific topics, formal publications, technical surveys.
+Avoid for: recent news, code/libraries, general knowledge.
+
+### code
+1. Check search cache first: `python3 bin/cache.py check code "<query>"`
+2. Use `python3 bin/search-code.py search "<query>" --top 5`
+3. Optionally pass `--type repos|packages|qa|all` to narrow search
+4. Save results to cache: `python3 bin/cache.py store code "<query>" "<results_json>"`
+5. Return normalized results: {title, url, snippet, source_type: "code", credibility_tier, stars, language}
+
+Use for: libraries, frameworks, code examples, package info, Stack Overflow Q&A.
+Avoid for: academic papers, general knowledge, news.
+
 ## Cache TTLs
 - web: 7 days
+- academic: 30 days
+- code: 3 days
 - docs: 7 days
 - wikipedia: 30 days
 

@@ -7,7 +7,7 @@ Usage:
     python3 circuit_breaker.py status                            — Show all endpoints
     python3 circuit_breaker.py reset <endpoint>                  — Force reset to closed
 
-States: closed (normal) → open (failing, skip calls) → half-open (try one call).
+States: closed (normal) -> open (failing, skip calls) -> half-open (try one call).
 Prevents cascading failures from external API outages.
 """
 

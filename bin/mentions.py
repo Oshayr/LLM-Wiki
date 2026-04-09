@@ -268,7 +268,7 @@ def main():
         success = finder.link_mention(args.source_slug, args.target_slug, args.line_number)
         if success:
             logger.info("Mention linked", extra={"source": args.source_slug, "target": args.target_slug, "line": args.line_number})
-            print(f"Linked: {args.source_slug} → [[{args.target_slug}]] at line {args.line_number}")
+            print(f"Linked: {args.source_slug} -> [[{args.target_slug}]] at line {args.line_number}")
         else:
             logger.error("Failed to link mention", extra={"source": args.source_slug, "target": args.target_slug, "line": args.line_number})
             sys.exit(1)
