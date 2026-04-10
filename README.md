@@ -13,12 +13,6 @@ LLM Wiki is a [Claude Code](https://claude.ai/claude-code) plugin that captures 
 
 > Inspired by [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): raw sources are immutable, the LLM maintains the wiki layer, and a schema governs behavior.
 
-<p align="center">
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-  <a href="https://github.com/Oshayr/llm-wiki"><img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version"></a>
-  <a href="https://claude.ai/claude-code"><img src="https://img.shields.io/badge/platform-Claude%20Code-orange.svg" alt="Platform"></a>
-  <a href="https://github.com/Oshayr/llm-wiki/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
-</p>
 
 ## Core Features
 
