@@ -31,23 +31,15 @@ The FastAPI web server **only runs when explicitly requested**. There are two wa
 
 ### Manual Launch
 
-To start the server manually from the command line without using the skill:
+Dependencies are installed automatically by the plugin's `SessionStart` hook. To start the server manually from the command line:
 
-1. Install dependencies once (if not already installed):
-   ```bash
-   uv add fastapi uvicorn markdown-it-py mdit-py-plugins jinja2 watchdog websockets
-   ```
-2. Run the server script:
-   ```bash
-   python path/to/skills/serve/scripts/server.py --wiki-dir .wiki/ --port 8420
-   ```
-   
-   Or with `uv`:
-   ```bash
-   uv run python path/to/skills/serve/scripts/server.py --wiki-dir .wiki/ --port 8420
-   ```
+```bash
+python path/to/skills/serve/scripts/server.py --wiki-dir .wiki/ --port 8420
+```
 
 Replace `path/to` with the full path to your LLM-Wiki installation (typically `.claude/plugins/llm-wiki`).
+
+If dependencies are missing, install manually: `pip install -r requirements.txt`
 
 ## Features
 

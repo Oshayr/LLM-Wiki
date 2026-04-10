@@ -1275,8 +1275,8 @@ freshness_tier: warm
         <h1 className="section-title">Quick Start</h1>
         <p className="section-subtitle">Get up and running in 5 minutes.</p>
         <div className="step"><div className="step-num">1</div><div className="step-body">
-          <div className="step-title">Install</div>
-          <CodeBlock label="bash">pip install -r requirements.txt</CodeBlock>
+          <div className="step-title">Install Plugin</div>
+          <CodeBlock label="bash">claude plugin install ./llm-wiki</CodeBlock>
         </div></div>
         <div className="step"><div className="step-num">2</div><div className="step-body">
           <div className="step-title">First Wiki Page</div>
@@ -1308,19 +1308,14 @@ freshness_tier: warm
         </tbody></table></div>
         <h3 style={{marginTop:24,marginBottom:16}}>Setup Steps</h3>
         <div className="step"><div className="step-num">1</div><div className="step-body">
-          <div className="step-title">Copy the Plugin</div>
-          <div className="step-desc">Copy LLM-Wiki into Claude Code's plugin directory.</div>
-          <CodeBlock label="bash">cp -r llm-wiki .claude/plugins/</CodeBlock>
+          <div className="step-title">Install the Plugin</div>
+          <div className="step-desc">Install via CLI or copy manually into the plugins directory.</div>
+          <CodeBlock label="bash">claude plugin install ./llm-wiki</CodeBlock>
+          <Callout type="info">Or manually: <code>cp -r llm-wiki .claude/plugins/</code></Callout>
         </div></div>
         <div className="step"><div className="step-num">2</div><div className="step-body">
-          <div className="step-title">Install Dependencies</div>
-          <div className="step-desc">Install the required packages for the web server and MCP server.</div>
-          <CodeBlock label="bash">pip install -r .claude/plugins/llm-wiki/requirements.txt</CodeBlock>
-          <Callout type="info">Installs: fastapi, uvicorn, markdown-it-py, jinja2, watchdog, aiosqlite, websockets, mcp.</Callout>
-        </div></div>
-        <div className="step"><div className="step-num">3</div><div className="step-body">
-          <div className="step-title">Verify Installation</div>
-          <div className="step-desc">Restart Claude Code. Check that 5 commands are available.</div>
+          <div className="step-title">Restart Claude Code</div>
+          <div className="step-desc">Dependencies (fastapi, uvicorn, mcp, etc.) install automatically on first session via the SessionStart hook.</div>
           <CodeBlock label="bash">/wiki-write, /wiki-read, /wiki-serve, /wiki-maintain, /wiki-view</CodeBlock>
         </div></div>
       </section>

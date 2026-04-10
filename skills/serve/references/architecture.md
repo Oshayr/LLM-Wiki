@@ -389,7 +389,7 @@ websockets>=12.0
 When the skill is invoked (`/wiki-serve`):
 
 1. **Check prerequisites:** `.wiki/SCHEMA.md` exists (wiki initialized). If not, auto-create `.wiki/` directory structure.
-2. **Install dependencies:** `pip install -r requirements.txt` (if not already installed)
+2. **Dependencies:** Already installed by the plugin's `SessionStart` hook (runs automatically on session start)
 3. **Initialize WikiStore:** Scan `.wiki/pages/*.md`, build SQLite index
 4. **Seed research queue:** Find all `[[slug]]` links pointing to non-existent pages → enqueue as low-priority `page_create` tasks
 5. **Start research workers:** 2 background threads begin processing queue

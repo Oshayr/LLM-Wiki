@@ -12,9 +12,12 @@
 git clone https://github.com/Oshayr/llm-wiki
 cd llm-wiki
 
-# Install optional dependencies for full feature set
+# Install core dependencies (web UI, MCP server)
+pip install -r requirements.txt
+
+# Optional: enhanced features
 pip install sentence-transformers numpy scikit-learn   # semantic search
-pip install fastapi uvicorn markdown-it-py jinja2      # web UI
+pip install trafilatura                                # fallback content extraction
 ```
 
 Test a skill locally by installing the plugin into a Claude Code project:

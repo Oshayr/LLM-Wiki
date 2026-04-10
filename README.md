@@ -73,17 +73,16 @@ sequenceDiagram
 
 ### Installation
 
-1. **Copy the plugin** into your Claude Code plugins directory:
+1. **Install the plugin**:
+   ```bash
+   claude plugin install ./llm-wiki
+   ```
+   Or copy manually:
    ```bash
    cp -r llm-wiki .claude/plugins/
    ```
 
-2. **Install dependencies**:
-   ```bash
-   pip install -r .claude/plugins/llm-wiki/requirements.txt
-   ```
-
-3. **Restart Claude Code** and you're ready to go.
+2. **Restart Claude Code** — dependencies install automatically on first session.
 
 ### First Commands
 
@@ -98,9 +97,10 @@ Start using the wiki immediately with any of these:
 
 ### Dependencies
 
-Required for vector operations in search and caching:
+Core dependencies (fastapi, uvicorn, mcp, etc.) are installed automatically via the plugin's `SessionStart` hook. For optional enhanced features:
 ```bash
-pip install numpy sqlite-vec
+pip install trafilatura        # fallback content extraction
+pip install numpy sqlite-vec   # vector search and caching
 ```
 
 ## Skills Reference
