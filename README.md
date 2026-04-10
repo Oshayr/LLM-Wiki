@@ -7,16 +7,20 @@
 
 # llm-wiki
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/Oshayr/llm-wiki)
-[![Platform](https://img.shields.io/badge/platform-Claude%20Code-orange.svg)](https://claude.ai/claude-code)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Oshayr/llm-wiki/pulls)
+**An autonomous knowledge base that grows as you work.**
 
-**An autonomous knowledge base that grows as you work.** LLM Wiki is a [Claude Code](https://claude.ai/claude-code) plugin that captures research, ideas, and decisions into an interlinked wiki with semantic search, automatic research, and a Wikipedia-style web UI. Knowledge compounds over time — the more you use it, the smarter it gets.
+LLM Wiki is a [Claude Code](https://claude.ai/claude-code) plugin that captures research, ideas, and decisions into an interlinked wiki with semantic search, automatic research, and a Wikipedia-style web UI. Knowledge compounds over time — the more you use it, the smarter it gets.
 
-Inspired by [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): raw sources are immutable, the LLM maintains the wiki layer, and a schema governs behavior.
+> Inspired by [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): raw sources are immutable, the LLM maintains the wiki layer, and a schema governs behavior.
 
-## Features
+<p align="center">
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://github.com/Oshayr/llm-wiki"><img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version"></a>
+  <a href="https://claude.ai/claude-code"><img src="https://img.shields.io/badge/platform-Claude%20Code-orange.svg" alt="Platform"></a>
+  <a href="https://github.com/Oshayr/llm-wiki/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
+</p>
+
+## Core Features
 
 ### Knowledge Management
 - **Automatic capture** — saves research, ideas, decisions, and findings to the wiki as you work
@@ -32,7 +36,7 @@ Inspired by [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpath
 - **Tool discovery** — works with whatever tools the user has (WebSearch, WebFetch, Wikipedia API, MCP tools)
 - **Auto-ingestion** — saves findings to wiki with proper citations
 
-### Web UI
+### Web UI Features
 - **Wikipedia-style browsable website** with 4 themes (light, dark, terminal, wikipedia)
 - **Interactive knowledge graph** ([Cytoscape.js](https://js.cytoscape.org/)) with multiple layouts, clustering, and neighborhood highlighting
 - **Canvas/whiteboard view** for spatial page arrangement
@@ -42,38 +46,68 @@ Inspired by [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpath
 - **Content gap analysis** dashboard
 - **WebSocket chat** sidebar with RAG-augmented Q&A
 
-### Maintenance
+### Maintenance & Health
 - **Self-maintaining** — lints broken links, merges duplicates, upgrades confidence, flags stale content
 - **Daily notes** and journal workflows
 - **Smart caching** with adaptive TTL and stale-while-revalidate
 - **Circuit breakers** for external API resilience
 - **Git integration** with auto-commit, attribution, and undo
 
+## How It Works
+
+The wiki operates in a simple cycle: when you ask a question, it first checks its knowledge base. If found, it returns a cited answer. If not found, it automatically researches the topic, ingests the findings, and provides an answer—all without breaking your workflow.
+
+```mermaid
+sequenceDiagram
+    User->>wiki-reader: /wiki-read "What is X?"
+    wiki-reader->>wiki-index: Check knowledge base
+    alt Found in wiki
+        wiki-index-->>wiki-reader: Page exists
+        wiki-reader->>User: Cited answer from wiki
+    else Not found
+        wiki-index-->>wiki-reader: No results
+        wiki-reader->>search-orchestrator: Research needed
+        search-orchestrator->>search-channel: Fan out queries (web, academic, code, docs)
+        search-channel->>research-processor: Raw search results
+        research-processor->>wiki-writer: Processed findings
+        wiki-writer->>wiki-pages: Create/update page
+        wiki-writer->>User: Cited answer with new page
+    end
+```
+
 ## Quick Start
 
-```bash
-# Copy into your Claude Code plugins directory
-cp -r llm-wiki .claude/plugins/
+### Installation
 
-# Install dependencies
-pip install -r .claude/plugins/llm-wiki/requirements.txt
-```
+1. **Copy the plugin** into your Claude Code plugins directory:
+   ```bash
+   cp -r llm-wiki .claude/plugins/
+   ```
 
-Restart Claude Code. Start using the wiki immediately:
+2. **Install dependencies**:
+   ```bash
+   pip install -r .claude/plugins/llm-wiki/requirements.txt
+   ```
 
-```
-/wiki-write https://example.com/article    # Ingest a page
-/wiki-read "What is transformer attention?"  # Ask — researches if not in wiki
-/wiki-serve                                  # Browse at localhost:8420
-```
+3. **Restart Claude Code** and you're ready to go.
 
-### First Use
+### First Commands
 
+Start using the wiki immediately with any of these:
+
+| Command | Purpose |
+|---------|---------|
+| `/wiki-write https://example.com/article` | Ingest a web page |
+| `/wiki-read "What is transformer attention?"` | Ask — researches if not in wiki |
+| `/wiki-serve` | Browse the wiki at `localhost:8420` |
+| `/wiki-maintain` | Health check and optimization |
+
+### Dependencies
+
+Required for vector operations in search and caching:
 ```bash
 pip install numpy sqlite-vec
 ```
-
-Required for vector operations in search and caching.
 
 ## Skills Reference
 
@@ -156,65 +190,235 @@ Read-only dashboard, statistics, and export capabilities.
 | `/wiki-view export json` | Export as JSON knowledge graph |
 | `/wiki-view artifacts <type>` | Generate study guide, timeline, glossary, or comparison |
 
+---
+
+## How Research-on-Miss Works
+
+When you ask a question that's not in the wiki, the entire research pipeline activates automatically. Here's the flow:
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant WR as wiki-reader
+    participant Index as wiki index
+    participant SO as search-orchestrator
+    participant SC as search-channel
+    participant RP as research-processor
+    participant WW as wiki-writer
+    participant BM as backlink-manager
+
+    User->>WR: /wiki-read "What is X?"
+    WR->>Index: Check for matching pages
+    alt Page found
+        Index-->>WR: Return page
+        WR-->>User: Cited answer from wiki
+    else No match
+        Index-->>WR: No results
+        WR->>WR: Detect query intent & complexity
+        WR->>SO: Trigger research
+        SO->>SO: Route to search channels
+        SO->>SC: Dispatch to web, academic, code, docs channels
+        par Parallel Research
+            SC->>SC: Web search
+            SC->>SC: Academic search
+            SC->>SC: Code search
+            SC->>SC: Docs search
+        end
+        SC-->>RP: Raw results
+        RP->>RP: Deduplicate, condense, rank
+        RP-->>WW: Processed findings
+        WW->>WW: Synthesize findings into page
+        WW->>BM: Update backlinks
+        BM->>Index: Register page
+        WW-->>User: Cited answer with new wiki page
+    end
+```
+
+---
+
 ## Architecture
+
+### System Overview
+
+LLM Wiki consists of 5 entry points (skills), 10 autonomous agents, utilities in the bin/, and a persistent data layer in .wiki/.
 
 ```mermaid
 flowchart TD
-    User([User]) --> Skills
+    User([User]) -->|Invokes| Skills
     
-    subgraph Skills["/wiki-* Skills"]
-        W["/wiki-write"]
-        R["/wiki-read"]
-        S["/wiki-serve"]
-        M["/wiki-maintain"]
-        V["/wiki-view"]
+    subgraph Skills["5 Entry Points"]
+        W["/wiki-write<br/>Ingest & Update"]
+        R["/wiki-read<br/>Search & Ask"]
+        S["/wiki-serve<br/>Web UI"]
+        M["/wiki-maintain<br/>Health Check"]
+        V["/wiki-view<br/>Dashboard"]
     end
     
-    subgraph Agents["10 Agents"]
-        WW["wiki-writer (sonnet)"]
-        WR["wiki-reader (haiku)"]
-        WA["wiki-auditor (haiku)"]
-        BM["backlink-manager (haiku)"]
-        SO["search-orchestrator (sonnet)"]
-        SC["search-channel (haiku)"]
-        RL["research-loop (sonnet)"]
-        RP["research-processor (haiku)"]
-        FC["fact-checker (sonnet)"]
-        CE["citation-explorer (sonnet)"]
+    Skills -->|Route to| Agents
+    
+    subgraph Agents["10 Autonomous Agents"]
+        subgraph write["Write Pipeline"]
+            WW["wiki-writer<br/>(Sonnet)"]
+            BM["backlink-manager<br/>(Haiku)"]
+        end
+        
+        subgraph read["Read Pipeline"]
+            WR["wiki-reader<br/>(Haiku)"]
+            SO["search-orchestrator<br/>(Sonnet)"]
+            SC["search-channel<br/>(Haiku)"]
+        end
+        
+        subgraph research["Research Pipeline"]
+            RL["research-loop<br/>(Sonnet)"]
+            RP["research-processor<br/>(Haiku)"]
+        end
+        
+        subgraph quality["Quality Pipeline"]
+            WA["wiki-auditor<br/>(Haiku)"]
+            FC["fact-checker<br/>(Sonnet)"]
+            CE["citation-explorer<br/>(Sonnet)"]
+        end
     end
     
-    subgraph Data[".wiki/"]
-        P["pages/"]
-        I["index.md"]
-        C["cache/"]
-        RW["raw/"]
+    Agents -->|Read/Write| Data
+    Agents -->|Use| Bin
+    
+    subgraph Bin["Utilities (bin/)"]
+        Search["search.py<br/>TF-IDF"]
+        Cache["cache.py<br/>Vectors"]
+        BL["backlinks.py<br/>Links"]
+        Gap["gaps.py<br/>Analysis"]
+        Git["git.py<br/>Tracking"]
     end
     
-    W --> WW --> BM
-    R --> WR --> WW
-    WR --> SO --> SC
-    M --> WA --> BM
-    S --> Data
-    V --> Data
-    WW --> Data
-    WR --> Data
-    RL --> SO
-    FC --> Data
-    CE --> Data
+    subgraph Data[".wiki/ Data Layer"]
+        Pages["pages/<br/>Markdown"]
+        Index["index.md<br/>Catalog"]
+        Cache2["cache/<br/>SQLite"]
+        Raw["raw/<br/>Sources"]
+        Schema["SCHEMA.md<br/>Rules"]
+    end
+    
+    S -->|Serves| UI["Web Server<br/>localhost:8420"]
+    UI -->|Renders| UIFeatures["4 Themes, Graph,<br/>Editor, Chat, Review"]
 ```
+
+### Directory Structure
 
 ```
 llm-wiki/
-  .claude-plugin/       Plugin metadata (plugin.json, marketplace.json)
-  agents/               10 autonomous agents
-  bin/                  23 CLI utilities (search, backlinks, gaps, cache, ...)
-  mcp/                  MCP server for wiki operations
-  rules/                Workflow and integration rules
-  skills/               5 user-facing skills
-    serve/
-      scripts/          FastAPI server, WikiStore, RAG, chat, research workers
-      static/           JavaScript + CSS (4 themes)
-      templates/        16 Jinja2 templates
+  .claude-plugin/              Plugin metadata (plugin.json, marketplace.json)
+  agents/                      10 autonomous agents
+  bin/                         23 CLI utilities (search, backlinks, gaps, cache, git, ...)
+  mcp/                         MCP server for wiki operations
+  rules/                       Workflow and integration rules
+  skills/                      5 user-facing skills
+    serve/                     Web UI server and assets
+      scripts/                 FastAPI server, WikiStore, RAG, chat, research workers
+      static/                  JavaScript + CSS (4 themes)
+      templates/               16 Jinja2 templates
+```
+
+### Agent Collaboration During Research
+
+When `/wiki-read deep` triggers a deep research operation, agents coordinate like this:
+
+```mermaid
+sequenceDiagram
+    participant OR as search-orchestrator
+    participant SC as search-channel
+    participant RP as research-processor
+    participant WW as wiki-writer
+    participant BM as backlink-manager
+    participant FC as fact-checker
+
+    OR->>OR: Classify query complexity
+    OR->>SC: Fan out to 4 channels (web, academic, code, docs)
+    par Parallel Search
+        SC->>SC: Execute web search
+        SC->>SC: Execute academic search
+        SC->>SC: Execute code search
+        SC->>SC: Execute docs search
+    end
+    SC-->>RP: Raw results stream
+    RP->>RP: Deduplicate & condense
+    RP->>WW: Processed findings
+    WW->>WW: Synthesize into wiki page
+    WW->>BM: Update backlinks
+    BM->>BM: Maintain reverse index
+    FC->>FC: Verify claims
+    FC->>WW: Flag uncertainties
+    WW-->>OR: Complete
+```
+
+### Data Flow: From Source to Wiki
+
+How content flows from raw sources into the wiki knowledge base:
+
+```mermaid
+flowchart LR
+    URL["URL / File / Text"]
+    Fetch["fetch.py<br/>(Jina/Trafilatura)"]
+    Extract["Extract<br/>Content & Metadata"]
+    Writer["wiki-writer<br/>Synthesize"]
+    Pages["pages/<br/>Markdown + YAML"]
+    Backlinks["backlinks.py<br/>Update index"]
+    Search["search.py<br/>Index for TF-IDF"]
+    Vector["cache.py<br/>Embeddings"]
+    
+    URL -->|Parse| Fetch
+    Fetch -->|Clean| Extract
+    Extract -->|Create page| Writer
+    Writer -->|Save| Pages
+    Pages -->|Extract links| Backlinks
+    Pages -->|Index content| Search
+    Pages -->|Embed chunks| Vector
+    
+    style URL fill:#e1f5ff
+    style Fetch fill:#fff3e0
+    style Extract fill:#fff3e0
+    style Writer fill:#f3e5f5
+    style Pages fill:#e8f5e9
+    style Backlinks fill:#fce4ec
+    style Search fill:#e0f2f1
+    style Vector fill:#f1f8e9
+```
+
+---
+
+### Circuit Breaker Resilience
+
+External API calls are protected by circuit breakers that gracefully degrade when services fail:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Closed
+    
+    Closed --> Open: Threshold exceeded<br/>(5 failures in 60s)
+    Open --> HalfOpen: Timeout<br/>(30s backoff)
+    HalfOpen --> Closed: Trial succeeds
+    HalfOpen --> Open: Trial fails
+    
+    Closed --> Closed: Success or<br/>slow failure
+    Open --> Open: Requests<br/>rejected
+    HalfOpen --> HalfOpen: Testing<br/>recovery
+    
+    note right of Closed
+        Normal operation
+        Requests pass through
+    end note
+    
+    note right of Open
+        Circuit tripped
+        Fast-fail all requests
+        Cache responses
+    end note
+    
+    note right of HalfOpen
+        Recovery test mode
+        Allows one request through
+        Monitors outcome
+    end note
 ```
 
 ---
@@ -259,33 +463,45 @@ updated: 2025-01-15
 
 ### Freshness Tiers
 
-| Tier | TTL | Examples |
-|------|-----|----------|
-| `live` | 15 min | stock prices, live scores, server status |
-| `breaking` | 1-6 hours | breaking news, incident updates |
-| `current` | 1-3 days | news articles, current events |
-| `fast` | 1-4 weeks | AI/LLM/MCP, API changes, benchmarks |
-| `moderate` | 1-3 months | software versions, frameworks |
-| `standard` | 6 months | general knowledge, how-to guides (default) |
-| `academic` | 1 year | research papers, studies |
-| `evergreen` | 5 years | history, biographies, theorems |
-| `permanent` | never | personal notes, ideas, memories |
+The wiki uses a 9-tier staleness system to determine when content needs refresh. Choose the tier matching your content's shelf life.
+
+| Tier | TTL | When to Use | Examples |
+|------|-----|------------|----------|
+| `live` | 15 min | Ultra-current data | stock prices, live scores, server status |
+| `breaking` | 1-6 hours | Rapidly evolving topics | breaking news, incident updates |
+| `current` | 1-3 days | Time-sensitive | news articles, current events |
+| `fast` | 1-4 weeks | Quickly changing fields | AI/LLM/MCP, API changes, benchmarks |
+| `moderate` | 1-3 months | Moderate change rate | software versions, frameworks |
+| `standard` | 6 months | Evergreen with updates | general knowledge, how-to guides (default) |
+| `academic` | 1 year | Stable research | research papers, studies |
+| `evergreen` | 5 years | Slowly changing | history, biographies, theorems |
+| `permanent` | never | Immutable | personal notes, ideas, memories |
 
 ## Web UI
 
 Start with `/wiki-serve` — opens at `localhost:8420`:
 
+### Navigation & Discovery
 - **Home** — recent pages, quick stats, search bar, active research tasks
-- **Page view** — rendered markdown with backlinks sidebar, source annotations, red-link detection
-- **Editor** — split-pane markdown + live preview with formatting toolbar and AI assist
+- **Search** — TF-IDF full-text search with snippets and autocomplete
 - **Knowledge graph** — interactive Cytoscape.js visualization with force-directed layouts, clustering, filtering
 - **Canvas** — spatial whiteboard for arranging pages visually
-- **Search** — TF-IDF full-text search with snippets and autocomplete
-- **Stats** — page counts, type/confidence distributions, freshness overview
-- **Gaps** — content gap analysis: missing pages, depth gaps, freshness gaps, structural holes
-- **Review** — FSRS-based spaced repetition flashcard interface
+- **Backlinks sidebar** — reverse links and unlinked mention detection
+
+### Content Creation & Editing
+- **Page view** — rendered markdown with source annotations, red-link detection, live research
+- **Editor** — split-pane markdown + live preview with formatting toolbar and AI assist
+- **Templates** — custom page type templates with auto-fill
+
+### Learning & Review
+- **Review** — FSRS-based spaced repetition flashcard interface for active recall
 - **Research dashboard** — background research task queue with SSE progress streaming
 - **Chat sidebar** — WebSocket-based RAG-augmented Q&A with cited answers
+
+### Analysis & Insights
+- **Stats** — page counts, type/confidence distributions, freshness overview
+- **Gaps** — content gap analysis: missing pages, depth gaps, freshness gaps, structural holes
+- **Themes** — 4 visual themes (light, dark, terminal, wikipedia)
 
 ### Custom Page Types
 
