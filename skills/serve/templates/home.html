@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Home - LLM Wiki{% endblock %}
+
+{% block content %}
+<div class="wiki-page-content">
+    <!-- Welcome Section -->
+    <div class="wiki-welcome">
+        <h1>LLM Wiki</h1>
+        <p class="wiki-tagline">A collaborative research wiki powered by AI and human knowledge.</p>
+    </div>
+
+    <!-- Search Prominent -->
+    <div class="wiki-home-search">
+        <form action="/search" method="GET" role="search" aria-label="Search wiki">
+            <input
+                type="search"
+                name="q"
+                class="wiki-home-search-input"
+                placeholder="Search or explore topics..."
+                autocomplete="off"
+                aria-label="Search or explore topics"
+            >
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
+    <!-- Stats Box -->
+    {% if stats %}
+    <div class="wiki-stats-box">
+        <h2>Wiki Stats</h2>
+        <div class="wiki-stats-grid">
+            <div class="wiki-stat">
+                <div class="wiki-stat-number">{{ stats.total_pages }}</div>
+                <div class="wiki-stat-label">Total Pages</div>
+            </div>
+            <div class="wiki-stat">
+                <div class="wiki-stat-number">{{ stats.by_type.get('article', 0) }}</div>
+                <div class="wiki-stat-label">Articles</div>
+            </div>
+            <div class="wiki-stat">
+                <div class="wiki-stat-number">{{ stats.by_type.get('research', 0) }}</div>
+                <div class="wiki-stat-label">Research Notes</div>
+            </div>
+            <div class="wiki-stat">
+                <div class="wiki-stat-number">{{ stats.by_confidence.get('high', 0) }}</div>
+                <div class="wiki-stat-label">High Confidence</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Pages -->
+    {% if recent_pages %}
+    <div class="wiki-recent-section">
+        <h2>Recent Pages</h2>
+        <ul class="wiki-page-list">
+            {% for page in recent_pages %}
+            <li class="wiki-page-item">
+                <a href="/wiki/{{ page.slug }}" class="wiki-page-link">{{ page.title }}</a>
+                <span class="wiki-type-badge wiki-type-{{ page.type }}">{{ page.type }}</span>
+                {% if page.confidence %}
+                <span class="wiki-confidence-badge" title="Confidence: {{ page.confidence }}">
+                    ★ {{ page.confidence }}
+                </span>
+                {% endif %}
+                <span class="wiki-page-meta">{{ page.updated_at|humanize }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Active Research Tasks -->
+    {% if active_tasks %}
+    <div class="wiki-tasks-section">
+        <h2>Active Research Tasks</h2>
+        <div class="wiki-tasks-list">
+            {% for task in active_tasks %}
+            <div class="wiki-task-item">
+                <div class="wiki-task-header">
+                    <h3>{{ task.topic }}</h3>
+                    <span class="wiki-task-status wiki-status-{{ task.status }}">{{ task.status }}</span>
+                </div>
+                <p class="wiki-task-stage">{{ task.stage_text }}</p>
+                <div class="wiki-task-progress">
+                    <div class="wiki-progress-bar">
+                        <div class="wiki-progress-fill" style="width: {{ task.progress }}%"></div>
+                    </div>
+                    <span class="wiki-progress-text">{{ task.progress }}%</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Start Exploring -->
+    <div class="wiki-explore-section">
+        <h2>Start Exploring</h2>
+        <p>Popular topics to get started:</p>
+        <div class="wiki-featured-topics">
+            <div class="wiki-featured-topic">
+                <a href="/wiki/artificial-intelligence">Artificial Intelligence</a>
+            </div>
+            <div class="wiki-featured-topic">
+                <a href="/wiki/quantum-computing">Quantum Computing</a>
+            </div>
+            <div class="wiki-featured-topic">
+                <a href="/wiki/climate-science">Climate Science</a>
+            </div>
+            <div class="wiki-featured-topic">
+                <a href="/wiki/neuroscience">Neuroscience</a>
+            </div>
+            <div class="wiki-featured-topic">
+                <a href="/wiki/biotechnology">Biotechnology</a>
+            </div>
+            <div class="wiki-featured-topic">
+                <a href="/wiki/space-exploration">Space Exploration</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

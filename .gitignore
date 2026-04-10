@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Wiki runtime data (user-specific, not part of the plugin)
+.wiki/
+.test-e2e/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Models (downloaded at runtime)
+*.onnx
+*.bin
+models/
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code local settings (dev-only, not part of the plugin)
+.claude/
+Claude.md
+
+# Logs
+*.log

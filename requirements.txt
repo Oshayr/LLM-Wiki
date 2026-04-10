@@ -1,0 +1,15 @@
+# llm-wiki — Python dependencies
+# Core bin/ scripts use only stdlib (no install needed for basic wiki features)
+
+# Web UI server (required for /serve skill)
+fastapi>=0.111
+uvicorn[standard]>=0.30
+markdown-it-py>=3.0
+mdit-py-plugins>=0.4
+jinja2>=3.1
+watchdog>=4.0
+aiosqlite>=0.20
+websockets>=12.0
+
+# MCP server (required for wiki MCP tools)
+mcp>=1.0

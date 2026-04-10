@@ -1,0 +1,14 @@
+{
+  "name": "llm-wiki",
+  "owner": {
+    "name": "Oshayr"
+  },
+  "plugins": [
+    {
+      "name": "llm-wiki",
+      "description": "LLM-powered personal wiki — autonomous knowledge base with multi-channel research, ingestion, search, and a browsable web UI",
+      "version": "1.0.0",
+      "source": "./"
+    }
+  ]
+}

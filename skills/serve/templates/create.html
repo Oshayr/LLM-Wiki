@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Create Page - LLM Wiki{% endblock %}
+
+{% block content %}
+<div class="wiki-editor">
+    <div class="wiki-editor-header">
+        <h1>Create New Page</h1>
+        <div class="wiki-editor-actions">
+            <a href="/" class="wiki-btn wiki-btn-secondary">Cancel</a>
+            <button class="wiki-btn wiki-btn-primary" id="create-btn">Create</button>
+        </div>
+    </div>
+
+    <div class="wiki-create-fields">
+        <div class="wiki-field">
+            <label for="page-slug">Slug (URL path)</label>
+            <input type="text" id="page-slug" value="{{ slug }}" placeholder="my-page-name" class="wiki-field-input" pattern="[a-z0-9-]+" title="Lowercase letters, numbers, and hyphens only">
+        </div>
+        <div class="wiki-field">
+            <label for="page-title">Title</label>
+            <input type="text" id="page-title" placeholder="My Page Name" class="wiki-field-input">
+        </div>
+        <div class="wiki-field">
+            <label for="page-type">Page Type</label>
+            <select id="page-type" class="wiki-field-input">
+                <option value="concept">Concept (default)</option>
+                <option value="brainstorming">Brainstorming</option>
+                <option value="idea">Idea</option>
+                <option value="memory">Memory</option>
+                <option value="status">Status</option>
+                <option value="rules">Rules</option>
+                <option value="config">Config</option>
+                <option value="skill">Skill</option>
+                <option value="reference">Reference</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Markdown Toolbar -->
+    <div class="wiki-md-toolbar" role="toolbar" aria-label="Markdown formatting">
+        <button data-md="bold" title="Bold (Ctrl+B)" aria-label="Bold"><b>B</b></button>
+        <button data-md="italic" title="Italic (Ctrl+I)" aria-label="Italic"><i>I</i></button>
+        <button data-md="heading" title="Heading" aria-label="Heading">H2</button>
+        <button data-md="link" title="Link (Ctrl+K)" aria-label="Insert link">Link</button>
+        <button data-md="image" title="Image" aria-label="Insert image">Img</button>
+        <button data-md="code" title="Code" aria-label="Insert code">Code</button>
+        <button data-md="list" title="Bullet list" aria-label="Insert list">List</button>
+        <button data-md="wikilink" title="Wiki link [[slug]]" aria-label="Insert wiki link">[[]]</button>
+        <button data-md="table" title="Insert table" aria-label="Insert table">Table</button>
+    </div>
+
+    <!-- Split editor: markdown + live preview -->
+    <div class="wiki-split-editor">
+        <div class="wiki-split-pane wiki-split-edit">
+            <div class="wiki-split-label">Markdown</div>
+            <textarea class="wiki-editor-textarea" id="editor-content" spellcheck="false" placeholder="Write your page content here..."></textarea>
+        </div>
+        <div class="wiki-split-pane wiki-split-preview">
+            <div class="wiki-split-label">Preview</div>
+            <div class="wiki-preview-content wiki-content" id="preview-content">
+                <p style="color: var(--wiki-text-light); font-style: italic;">Preview will appear here...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Assist Bar -->
+    <div class="wiki-ai-assist">
+        <div class="wiki-ai-presets">
+            <button class="wiki-ai-preset-btn" data-cmd="Expand this content with more detail">Expand</button>
+            <button class="wiki-ai-preset-btn" data-cmd="Add authoritative sources and citations">Add Sources</button>
+            <button class="wiki-ai-preset-btn" data-cmd="Fix grammar, spelling, and improve clarity">Fix Grammar</button>
+            <button class="wiki-ai-preset-btn" data-cmd="Summarize this content more concisely">Summarize</button>
+            <button class="wiki-ai-preset-btn" data-cmd="Add relevant image markdown links from Wikimedia Commons">Add Images</button>
+        </div>
+        <div class="wiki-ai-input-row">
+            <input type="text" id="ai-assist-input" class="wiki-ai-input" placeholder="Ask AI to help... (expand, rewrite, add sections, etc.)" autocomplete="off">
+            <button class="wiki-btn wiki-btn-primary" id="ai-assist-btn">AI Assist</button>
+        </div>
+        <div class="wiki-ai-status" id="ai-status"></div>
+    </div>
+
+    <div class="wiki-editor-footer">
+        <span class="wiki-editor-hint">Or import a file:</span>
+        <input type="file" id="import-file" accept=".txt,.md,.markdown,.jpg,.jpeg,.png,.gif,.svg,.webp,.pdf" class="wiki-import-input">
+        <button class="wiki-btn wiki-btn-secondary" id="import-btn" style="margin-left: 8px;">Import File</button>
+    </div>
+</div>
+
+<script>
+(function() {
+    var slugInput = document.getElementById('page-slug');
+    var titleInput = document.getElementById('page-title');
+    var typeSelect = document.getElementById('page-type');
+    var editor = document.getElementById('editor-content');
+    var preview = document.getElementById('preview-content');
+    var createBtn = document.getElementById('create-btn');
+    var importBtn = document.getElementById('import-btn');
+    var importFile = document.getElementById('import-file');
+    var aiInput = document.getElementById('ai-assist-input');
+    var aiBtn = document.getElementById('ai-assist-btn');
+    var aiStatus = document.getElementById('ai-status');
+
+    // ── Page type templates ─────────────────────────────────────
+    var templates = {
+        concept: '## Overview\n\n\n\n## Key Concepts\n\n\n\n## Details\n\n\n\n## See Also\n\n- [[related-topic]]\n',
+        brainstorming: '## Theme 1\n\n- Idea A\n- Idea B\n- Idea C\n\n## Theme 2\n\n- Idea D\n- Idea E\n\n## Evaluation\n\n| Idea | Impact | Effort | Priority |\n|------|--------|--------|----------|\n| A    | High   | Low    | 1        |\n| B    | Medium | Medium | 2        |\n',
+        idea: '## Summary\n\nOne-sentence description of the idea.\n\n## Problem\n\nWhat problem does this solve?\n\n## Proposed Solution\n\nHow does it work?\n\n## Pros\n\n- \n\n## Cons\n\n- \n\n## Resources\n\n- [[related-concept]]\n',
+        memory: '## Key Facts\n\n- \n\n## Relationships\n\n- \n\n## Context\n\n\n\n## Last Updated\n\nNotes on what changed.\n',
+        status: '## Current State\n\n\n\n## Metrics\n\n| Metric | Value | Trend |\n|--------|-------|-------|\n|        |       |       |\n\n## Recent Changes\n\n- \n\n## Action Items\n\n- [ ] \n\n## Blockers\n\n- \n',
+        rules: '## Rules\n\n1. \n2. \n3. \n\n## Exceptions\n\n- \n\n## Rationale\n\nWhy these rules exist.\n\n## Examples\n\n### Allowed\n\n- \n\n### Not Allowed\n\n- \n',
+        config: '## Settings\n\n| Key | Value | Default | Description |\n|-----|-------|---------|-------------|\n|     |       |         |             |\n\n## Defaults\n\n\n\n## Notes\n\n\n',
+        skill: '## Description\n\nWhat this skill does.\n\n## Usage\n\n```\n/command-name [args]\n```\n\n## Examples\n\n```\n/command-name example-arg\n```\n\n## Parameters\n\n| Param | Type | Required | Description |\n|-------|------|----------|-------------|\n|       |      |          |             |\n\n## Related Skills\n\n- [[other-skill]]\n',
+        reference: '## Summary\n\n\n\n## Details\n\n\n\n## References\n\n- \n'
+    };
+
+    var frontmatterTemplates = {
+        concept:       function(t,d) { return 'title: '+t+'\ntype: concept\nconfidence: medium\ncreated: '+d+'\nupdated: '+d; },
+        brainstorming: function(t,d) { return 'title: '+t+'\ntype: brainstorming\nstatus: active\nparticipants: []\ncreated: '+d+'\nupdated: '+d; },
+        idea:          function(t,d) { return 'title: '+t+'\ntype: idea\nstatus: draft\npriority: medium\ncreated: '+d+'\nupdated: '+d; },
+        memory:        function(t,d) { return 'title: '+t+'\ntype: memory\ncategory: fact\ncreated: '+d+'\nupdated: '+d; },
+        status:        function(t,d) { return 'title: '+t+'\ntype: status\nscope: project\ncreated: '+d+'\nupdated: '+d; },
+        rules:         function(t,d) { return 'title: '+t+'\ntype: rules\nscope: system\nenforcement: advisory\ncreated: '+d+'\nupdated: '+d; },
+        config:        function(t,d) { return 'title: '+t+'\ntype: config\nscope: project\ncreated: '+d+'\nupdated: '+d; },
+        skill:         function(t,d) { return 'title: '+t+'\ntype: skill\ntrigger: /command-name\nstatus: active\ncreated: '+d+'\nupdated: '+d; },
+        reference:     function(t,d) { return 'title: '+t+'\ntype: reference\nconfidence: medium\ncreated: '+d+'\nupdated: '+d; }
+    };
+
+    // Apply template when type changes (calls updatePreview from editor.js)
+    typeSelect.addEventListener('change', function() {
+        var type = this.value;
+        var body = templates[type] || '';
+        if (!editor.value.trim() || editor.dataset.fromTemplate === 'true') {
+            editor.value = body;
+            editor.dataset.fromTemplate = 'true';
+            editor.dispatchEvent(new Event('input')); // triggers preview via editor.js
+        }
+    });
+
+    // Mark manual edit
+    editor.addEventListener('input', function() {
+        if (editor.dataset.fromTemplate === 'true' && editor.value.trim()) {
+            editor.dataset.fromTemplate = 'false';
+        }
+    });
+
+    // ── Auto-generate slug from title ───────────────────────────
+    titleInput.addEventListener('input', function() {
+        if (!slugInput.dataset.manual) {
+            slugInput.value = this.value.toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+        }
+    });
+    slugInput.addEventListener('input', function() {
+        this.dataset.manual = 'true';
+    });
+
+    // Auto-fill title from slug
+    if (slugInput.value && !titleInput.value) {
+        titleInput.value = slugInput.value.replace(/-/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+    }
+
+    // ── Create page ─────────────────────────────────────────────
+    createBtn.addEventListener('click', function() {
+        var slug = slugInput.value.trim();
+        var title = titleInput.value.trim() || slug.replace(/-/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+        var type = typeSelect.value;
+        var content = editor.value.trim();
+
+        if (!slug) { alert('Slug is required'); return; }
+
+        // Build frontmatter if not present
+        if (!content.startsWith('---')) {
+            var today = new Date().toISOString().slice(0, 10);
+            var fmFn = frontmatterTemplates[type] || frontmatterTemplates.concept;
+            content = '---\n' + fmFn(title, today) + '\n---\n\n' + content;
+        }
+
+        createBtn.textContent = 'Creating...';
+        createBtn.disabled = true;
+
+        fetch('/api/wiki/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: slug, content: content })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.status === 'created') {
+                window.location.href = '/wiki/' + slug;
+            } else {
+                alert('Create failed: ' + (data.error || 'Unknown error'));
+                createBtn.textContent = 'Create';
+                createBtn.disabled = false;
+            }
+        })
+        .catch(function(e) {
+            alert('Create failed: ' + e);
+            createBtn.textContent = 'Create';
+            createBtn.disabled = false;
+        });
+    });
+
+    // AI Assist + live preview handled by shared editor.js
+    // (loaded below via initEditor)
+
+    // ── Import file ─────────────────────────────────────────────
+    importBtn.addEventListener('click', function() {
+        var file = importFile.files[0];
+        if (!file) { alert('Select a file first'); return; }
+
+        var slug = slugInput.value.trim();
+        var formData = new FormData();
+        formData.append('file', file);
+        if (slug) formData.append('slug', slug);
+
+        importBtn.textContent = 'Importing...';
+        importBtn.disabled = true;
+
+        fetch('/api/wiki/import', {
+            method: 'POST',
+            body: formData
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.status === 'imported') {
+                if (data.type === 'image') {
+                    editor.value += '\n![' + file.name + '](' + data.url + ')\n';
+                    editor.dispatchEvent(new Event('input'));
+                    alert('Image uploaded! Markdown inserted.');
+                } else {
+                    window.location.href = '/wiki/' + data.slug;
+                }
+            } else {
+                alert('Import failed: ' + (data.error || 'Unknown error'));
+            }
+            importBtn.textContent = 'Import File';
+            importBtn.disabled = false;
+        })
+        .catch(function(e) {
+            alert('Import failed: ' + e);
+            importBtn.textContent = 'Import File';
+            importBtn.disabled = false;
+        });
+    });
+
+    // Tab inserts handled by editor.js
+})();
+</script>
+<script src="/static/editor.js?v=11"></script>
+<script>initEditor(document.getElementById('page-slug').value || 'new-page');</script>
+{% endblock %}

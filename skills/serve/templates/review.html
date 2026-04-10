@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Review — LLM Wiki{% endblock %}
+
+{% block content %}
+<div class="review-container" style="max-width: 700px; margin: 0 auto; padding: 20px;">
+    <h1>Spaced Repetition Review</h1>
+
+    <div id="review-stats" style="display: flex; gap: 20px; margin-bottom: 20px; padding: 12px; background: var(--bg-secondary, #f5f5f5); border-radius: 8px;">
+        <div><strong>{{ stats.get('due_now', 0) }}</strong> due now</div>
+        <div><strong>{{ stats.get('total_cards', 0) }}</strong> total cards</div>
+        <div><strong>{{ stats.get('total_reviews', 0) }}</strong> reviews</div>
+    </div>
+
+    {% if cards %}
+    <div id="card-container">
+        <div id="card" style="border: 2px solid var(--border, #ddd); border-radius: 12px; padding: 30px; min-height: 200px; cursor: pointer; transition: all 0.3s;" onclick="flipCard()">
+            <div id="card-front" style="font-size: 1.2em;">
+                <div style="color: var(--text-muted, #666); font-size: 0.8em; margin-bottom: 8px;">
+                    <span id="card-type" class="badge"></span>
+                    <a id="card-source" href="#" style="margin-left: 8px;"></a>
+                </div>
+                <div id="card-question"></div>
+            </div>
+            <div id="card-back" style="display: none; font-size: 1.1em; border-top: 1px solid var(--border, #ddd); padding-top: 15px; margin-top: 15px;">
+                <div id="card-answer"></div>
+            </div>
+        </div>
+
+        <div id="grade-buttons" style="display: none; margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+            <button onclick="gradeCard(1)" style="background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Again (1)</button>
+            <button onclick="gradeCard(2)" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Hard (2)</button>
+            <button onclick="gradeCard(3)" style="background: #22c55e; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Good (3)</button>
+            <button onclick="gradeCard(4)" style="background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Easy (4)</button>
+        </div>
+
+        <div id="progress" style="margin-top: 20px; text-align: center; color: var(--text-muted, #666);">
+            Card <span id="card-num">1</span> of <span id="card-total">{{ cards|length }}</span>
+        </div>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 40px; color: var(--text-muted, #666);">
+        <h2>All caught up!</h2>
+        <p>No cards due for review right now.</p>
+        <p>Cards are generated from wiki pages with question headings, definitions, and key takeaways.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+const cards = {{ cards | tojson }};
+let currentIdx = 0;
+let revealed = false;
+
+function showCard() {
+    if (currentIdx >= cards.length) {
+        const container = document.getElementById('card-container');
+        while (container.firstChild) container.removeChild(container.firstChild);
+        const h = document.createElement('h2');
+        h.textContent = 'Review Complete!';
+        h.style.textAlign = 'center';
+        h.style.padding = '40px';
+        container.appendChild(h);
+        return;
+    }
+    const card = cards[currentIdx];
+    document.getElementById('card-question').textContent = card.front;
+    document.getElementById('card-answer').textContent = card.back;
+    document.getElementById('card-type').textContent = card.card_type;
+    const sourceLink = document.getElementById('card-source');
+    sourceLink.textContent = card.slug;
+    sourceLink.href = '/wiki/' + card.slug;
+    document.getElementById('card-front').style.display = 'block';
+    document.getElementById('card-back').style.display = 'none';
+    document.getElementById('grade-buttons').style.display = 'none';
+    document.getElementById('card-num').textContent = currentIdx + 1;
+    revealed = false;
+}
+
+function flipCard() {
+    if (!revealed && currentIdx < cards.length) {
+        document.getElementById('card-back').style.display = 'block';
+        document.getElementById('grade-buttons').style.display = 'flex';
+        revealed = true;
+    }
+}
+
+async function gradeCard(rating) {
+    const card = cards[currentIdx];
+    await fetch('/api/review/grade', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({card_id: card.id, rating: rating})
+    });
+    currentIdx++;
+    showCard();
+}
+
+if (cards.length > 0) showCard();
+</script>
+{% endblock %}

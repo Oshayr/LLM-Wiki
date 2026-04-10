@@ -1,0 +1,61 @@
+{
+  "name": "llm-wiki",
+  "version": "1.0.0",
+  "description": "LLM-powered personal wiki — autonomous knowledge base with research-on-miss, ingestion, search, a browsable web UI, and universal data gravity. Saves and retrieves knowledge automatically whenever relevant.",
+  "author": {
+    "name": "Oshayr"
+  },
+  "repository": "https://github.com/Oshayr/llm-wiki",
+  "license": "MIT",
+  "keywords": [
+    "wiki",
+    "knowledge-base",
+    "research",
+    "llm",
+    "autonomous",
+    "second-brain",
+    "obsidian",
+    "claude-code"
+  ],
+  "agents": [
+    "agents/backlink-manager.md",
+    "agents/citation-explorer.md",
+    "agents/fact-checker.md",
+    "agents/research-loop.md",
+    "agents/research-processor.md",
+    "agents/search-channel.md",
+    "agents/search-orchestrator.md",
+    "agents/wiki-auditor.md",
+    "agents/wiki-reader.md",
+    "agents/wiki-writer.md"
+  ],
+  "skills": [
+    "skills/maintain/SKILL.md",
+    "skills/read/SKILL.md",
+    "skills/serve/SKILL.md",
+    "skills/view/SKILL.md",
+    "skills/write/SKILL.md"
+  ],
+  "rules": [
+    "rules/wiki-integration.md",
+    "rules/workflow.md"
+  ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "diff -q \"${CLAUDE_PLUGIN_ROOT}/requirements.txt\" \"${CLAUDE_PLUGIN_DATA}/requirements.txt\" >/dev/null 2>&1 || (cp \"${CLAUDE_PLUGIN_ROOT}/requirements.txt\" \"${CLAUDE_PLUGIN_DATA}/requirements.txt\" && pip install -q -r \"${CLAUDE_PLUGIN_DATA}/requirements.txt\") || rm -f \"${CLAUDE_PLUGIN_DATA}/requirements.txt\""
+          }
+        ]
+      }
+    ]
+  },
+  "mcpServers": {
+    "wiki-mcp": {
+      "command": "python3",
+      "args": ["${PLUGIN_ROOT}/mcp_server/wiki-mcp-server.py"]
+    }
+  }
+}
