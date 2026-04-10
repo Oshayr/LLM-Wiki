@@ -329,50 +329,89 @@ function Badge({color="teal", children}) {
   return <span className={`badge ${color}`}>{children}</span>;
 }
 
-// Interactive Architecture Diagram with hover effects
+// Interactive Architecture Diagram with hover effects and full inner details
 function ArchDiagram() {
   const [hoveredLayer, setHoveredLayer] = useState(null);
+  const hl = (id) => hoveredLayer === id;
+  const glow = (id) => hl(id) ? 'drop-shadow(0 0 8px rgba(15,118,110,0.35))' : 'none';
+  const sw = (id) => hl(id) ? 2.5 : 1.5;
+  const connOp = (...ids) => ids.some(id => hl(id)) ? 1 : 0.5;
 
-  const layers = [
-    {id:"user", label:"USER LAYER", items:["Claude Code","CLI Skills","Web UI :8420","MCP Clients","Obsidian"], y:44, height:60, color:"#f0fdf4", stroke:"#86efac"},
-    {id:"agent", label:"AGENT LAYER — 10 Autonomous Agents", y:130, height:100, color:"#eff6ff", stroke:"#93c5fd"},
-    {id:"bin", label:"BIN/ UTILITIES — 23 Scripts", y:256, height:80, color:"#faf5ff", stroke:"#d8b4fe"},
-    {id:"servers", label:"SERVERS", y:256, height:80, color:"#fff7ed", stroke:"#fdba74"},
-    {id:"data", label:"DATA LAYER — .wiki/ directory", y:362, height:56, color:"#fefce8", stroke:"#fde047"},
-    {id:"external", label:"EXTERNAL", y:436, height:36, color:"#fdf2f8", stroke:"#f9a8d4"},
-  ];
-
-  return <div className="diagram">
+  return <div className="diagram" style={{overflowX:'auto'}}>
     <svg width="820" height="480" viewBox="0 0 820 480" style={{fontFamily:'IBM Plex Sans,sans-serif'}}>
-      <text x="410" y="24" textAnchor="middle" fontSize="14" fontWeight="700" fill="#1c1917">LLM-Wiki System Architecture (Interactive)</text>
+      <text x="410" y="24" textAnchor="middle" fontSize="14" fontWeight="700" fill="#1c1917">LLM-Wiki System Architecture</text>
 
-      {layers.map(layer => (
-        <g key={layer.id} className="arch-layer"
-           onMouseEnter={() => setHoveredLayer(layer.id)}
-           onMouseLeave={() => setHoveredLayer(null)}>
-          <rect x="20" y={layer.y} width="780" height={layer.height} rx="8"
-                fill={layer.color} stroke={layer.stroke} strokeWidth={hoveredLayer === layer.id ? "2.5" : "1.5"}
-                style={{filter: hoveredLayer === layer.id ? 'drop-shadow(0 0 8px rgba(15, 118, 110, 0.4))' : 'none'}}/>
-          <text x="40" y={layer.y+21} fontSize="10" fontWeight="600"
-                fill={layer.stroke.substring(0, 7) === '#f0fdf4' ? '#166534' : layer.stroke.substring(0, 7) === '#eff6ff' ? '#1e40af' : layer.stroke.substring(0, 7) === '#faf5ff' ? '#7e22ce' : layer.stroke.substring(0, 7) === '#fff7ed' ? '#9a3412' : layer.stroke.substring(0, 7) === '#fefce8' ? '#854d0e' : '#9d174d'}
-                letterSpacing=".06em">{layer.label}</text>
-        </g>
-      ))}
+      {/* USER LAYER */}
+      <g className="arch-layer" onMouseEnter={()=>setHoveredLayer('user')} onMouseLeave={()=>setHoveredLayer(null)}>
+        <rect x="20" y="44" width="780" height="60" rx="8" fill="#f0fdf4" stroke="#86efac" strokeWidth={sw('user')} style={{filter:glow('user')}}/>
+        <text x="40" y="65" fontSize="10" fontWeight="600" fill="#166534" letterSpacing=".06em">USER LAYER</text>
+        {[["Claude Code",40],["CLI Skills",160],["Web UI :8420",280],["MCP Clients",420],["Obsidian",560]].map(([l,x])=>
+          <React.Fragment key={l}><rect x={x} y="72" width={l.length>10?120:100} height="24" rx="4" fill="#fff" stroke="#86efac"/>
+          <text x={x+(l.length>10?60:50)} y="88" textAnchor="middle" fontSize="11" fill="#166534">{l}</text></React.Fragment>)}
+      </g>
 
-      <line x1="410" y1="104" x2="410" y2="130" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arrow)"
-            style={{opacity: hoveredLayer === 'user' || hoveredLayer === 'agent' ? 1 : 0.4}}/>
-      <line x1="410" y1="230" x2="410" y2="256" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arrow)"
-            style={{opacity: hoveredLayer === 'agent' || hoveredLayer === 'bin' || hoveredLayer === 'servers' ? 1 : 0.4}}/>
-      <line x1="210" y1="336" x2="210" y2="362" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arrow)"
-            style={{opacity: hoveredLayer === 'bin' || hoveredLayer === 'data' ? 1 : 0.4}}/>
-      <line x1="610" y1="336" x2="610" y2="362" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arrow)"
-            style={{opacity: hoveredLayer === 'servers' || hoveredLayer === 'data' ? 1 : 0.4}}/>
-      <line x1="410" y1="418" x2="410" y2="436" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arrow)"
-            style={{opacity: hoveredLayer === 'data' || hoveredLayer === 'external' ? 1 : 0.4}}/>
+      <line x1="410" y1="104" x2="410" y2="130" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arrow)" style={{opacity:connOp('user','agent'), transition:'opacity 0.2s'}}/>
+
+      {/* AGENT LAYER */}
+      <g className="arch-layer" onMouseEnter={()=>setHoveredLayer('agent')} onMouseLeave={()=>setHoveredLayer(null)}>
+        <rect x="20" y="130" width="780" height="100" rx="8" fill="#eff6ff" stroke="#93c5fd" strokeWidth={sw('agent')} style={{filter:glow('agent')}}/>
+        <text x="40" y="151" fontSize="10" fontWeight="600" fill="#1e40af" letterSpacing=".06em">AGENT LAYER — 10 Autonomous Agents</text>
+        {[["wiki-writer",40],["wiki-reader",158],["wiki-auditor",276],["search-orch.",394],["search-channel",512]].map(([l,x])=>
+          <React.Fragment key={l}><rect x={x} y="160" width="108" height="24" rx="4" fill="#fff" stroke="#93c5fd"/>
+          <text x={x+54} y="176" textAnchor="middle" fontSize="10" fill="#1e40af">{l}</text></React.Fragment>)}
+        {[["research-loop",40],["research-proc.",158],["fact-checker",276],["citation-expl.",394],["backlink-mgr",512]].map(([l,x])=>
+          <React.Fragment key={l}><rect x={x} y="195" width="108" height="24" rx="4" fill="#fff" stroke="#93c5fd"/>
+          <text x={x+54} y="211" textAnchor="middle" fontSize="10" fill="#1e40af">{l}</text></React.Fragment>)}
+      </g>
+
+      <line x1="410" y1="230" x2="410" y2="256" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arrow)" style={{opacity:connOp('agent','bin','servers'), transition:'opacity 0.2s'}}/>
+
+      {/* BIN/ UTILITIES — left half */}
+      <g className="arch-layer" onMouseEnter={()=>setHoveredLayer('bin')} onMouseLeave={()=>setHoveredLayer(null)}>
+        <rect x="20" y="256" width="380" height="80" rx="8" fill="#faf5ff" stroke="#d8b4fe" strokeWidth={sw('bin')} style={{filter:glow('bin')}}/>
+        <text x="40" y="277" fontSize="10" fontWeight="600" fill="#6b21a8" letterSpacing=".06em">BIN/ UTILITIES — 23 Scripts</text>
+        <text x="40" y="296" fontSize="10" fill="#7e22ce">rag.py · fetch.py · query.py · backlinks.py</text>
+        <text x="40" y="311" fontSize="10" fill="#7e22ce">cache.py · circuit_breaker.py · search-*.py</text>
+        <text x="40" y="326" fontSize="10" fill="#7e22ce">claims.py · provenance.py · export.py · ...</text>
+      </g>
+
+      {/* SERVERS — right half */}
+      <g className="arch-layer" onMouseEnter={()=>setHoveredLayer('servers')} onMouseLeave={()=>setHoveredLayer(null)}>
+        <rect x="420" y="256" width="380" height="80" rx="8" fill="#fff7ed" stroke="#fdba74" strokeWidth={sw('servers')} style={{filter:glow('servers')}}/>
+        <text x="440" y="277" fontSize="10" fontWeight="600" fill="#9a3412" letterSpacing=".06em">SERVERS</text>
+        <rect x="440" y="286" width="155" height="24" rx="4" fill="#fff" stroke="#fdba74"/>
+        <text x="517" y="302" textAnchor="middle" fontSize="10" fill="#9a3412">MCP Server (FastMCP)</text>
+        <rect x="440" y="316" width="155" height="14" rx="4" fill="#fff" stroke="#fdba74"/>
+        <text x="517" y="327" textAnchor="middle" fontSize="9" fill="#9a3412">FastAPI (on-demand)</text>
+        <rect x="615" y="286" width="165" height="44" rx="4" fill="#fff" stroke="#fdba74"/>
+        <text x="697" y="306" textAnchor="middle" fontSize="10" fill="#9a3412">WikiStore · RAG Handler</text>
+        <text x="697" y="322" textAnchor="middle" fontSize="10" fill="#9a3412">ChatManager · ResearchQ</text>
+      </g>
+
+      <line x1="210" y1="336" x2="210" y2="362" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arrow)" style={{opacity:connOp('bin','data'), transition:'opacity 0.2s'}}/>
+      <line x1="610" y1="336" x2="610" y2="362" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arrow)" style={{opacity:connOp('servers','data'), transition:'opacity 0.2s'}}/>
+
+      {/* DATA LAYER */}
+      <g className="arch-layer" onMouseEnter={()=>setHoveredLayer('data')} onMouseLeave={()=>setHoveredLayer(null)}>
+        <rect x="20" y="362" width="780" height="56" rx="8" fill="#fefce8" stroke="#fde047" strokeWidth={sw('data')} style={{filter:glow('data')}}/>
+        <text x="40" y="383" fontSize="10" fontWeight="600" fill="#854d0e" letterSpacing=".06em">DATA LAYER — .wiki/ directory</text>
+        {[["pages/",40],["templates/",130],["index.md",225],["log.md",315],["cache/",395],["raw/",475]].map(([l,x])=>
+          <React.Fragment key={l}><rect x={x} y="392" width={80} height="20" rx="4" fill="#fff" stroke="#fde047"/>
+          <text x={x+40} y="406" textAnchor="middle" fontSize="10" fill="#854d0e">{l}</text></React.Fragment>)}
+      </g>
+
+      <line x1="410" y1="418" x2="410" y2="436" stroke="#a8a29e" strokeWidth="1.5" markerEnd="url(#arrow)" style={{opacity:connOp('data','external'), transition:'opacity 0.2s'}}/>
+
+      {/* EXTERNAL */}
+      <g className="arch-layer" onMouseEnter={()=>setHoveredLayer('external')} onMouseLeave={()=>setHoveredLayer(null)}>
+        <rect x="20" y="436" width="780" height="36" rx="8" fill="#fdf2f8" stroke="#f9a8d4" strokeWidth={sw('external')} style={{filter:glow('external')}}/>
+        <text x="40" y="459" fontSize="10" fontWeight="600" fill="#9d174d" letterSpacing=".06em">EXTERNAL</text>
+        <text x="140" y="459" fontSize="10" fill="#be185d">Jina Reader · Context7 (optional) · WebSearch (built-in)</text>
+      </g>
 
       <defs><marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#a8a29e"/></marker></defs>
     </svg>
-    <p style={{fontSize:'13px', color:'var(--text-muted)', marginTop:'12px', textAlign:'center'}}>Hover over each layer to see the connections light up</p>
+    <p style={{fontSize:'13px', color:'var(--text-muted)', marginTop:'8px', textAlign:'center'}}>Hover over each layer to highlight its connections</p>
   </div>;
 }
 
@@ -451,52 +490,99 @@ function ResearchPipeline() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveStep(s => (s + 1) % 9);
-    }, 800);
+      setActiveStep(s => (s + 1) % 10);
+    }, 900);
     return () => clearInterval(interval);
   }, []);
 
-  const steps = [
-    {label:"Question", time:""},
-    {label:"Wiki Check", time:"~0.5s"},
-    {label:"Cache Check", time:"~0.2s"},
-    {label:"Search Orch.", time:"~1s"},
-    {label:"Web", time:"~2s"},
-    {label:"Docs", time:"~2s"},
-    {label:"Merge", time:"~0.5s"},
-    {label:"Dedup", time:"~0.3s"},
-    {label:"Fact Check", time:"~3s"},
+  // Layout: row 1 is linear, row 2 is the fan-out, row 3 continues after merge
+  // Row 1: Question -> Wiki Check -> Cache Check -> Search Orch.
+  // Row 2 (fan-out):                                   |-> Web
+  //                                                     |-> Docs
+  // Row 3:                                Merge <- -----+
+  // Row 3 continued: Merge -> Dedup -> Fact Check -> Ingest
+
+  const boxW = 82, boxH = 36, gap = 14;
+  const row1Y = 50, row2Y = 120, row3Y = 190;
+
+  const nodes = [
+    {label:"Question",     time:"",     x:30,  y:row1Y, step:0},
+    {label:"Wiki Check",   time:"~0.5s",x:30+1*(boxW+gap), y:row1Y, step:1},
+    {label:"Cache Check",  time:"~0.2s",x:30+2*(boxW+gap), y:row1Y, step:2},
+    {label:"Search Orch.", time:"~1s",  x:30+3*(boxW+gap), y:row1Y, step:3},
+    // fan-out
+    {label:"Web Search",   time:"~2s",  x:30+2*(boxW+gap), y:row2Y, step:4},
+    {label:"Doc Search",   time:"~2s",  x:30+4*(boxW+gap), y:row2Y, step:4},
+    // merge row
+    {label:"Merge",        time:"~0.5s",x:30+3*(boxW+gap), y:row3Y, step:5},
+    {label:"Dedup",        time:"~0.3s",x:30+4*(boxW+gap), y:row3Y, step:6},
+    {label:"Fact Check",   time:"~3s",  x:30+5*(boxW+gap), y:row3Y, step:7},
+    {label:"Wiki Ingest",  time:"",     x:30+6*(boxW+gap), y:row3Y, step:8},
   ];
 
-  return <div className="diagram">
-    <svg width="800" height="280" viewBox="0 0 800 280" style={{fontFamily:'IBM Plex Sans,sans-serif'}}>
-      <text x="400" y="24" textAnchor="middle" fontSize="14" fontWeight="700" fill="#1c1917">Research Engine Pipeline (Animated)</text>
+  // Arrows: [fromIdx, toIdx]
+  const arrows = [
+    [0,1],[1,2],[2,3],  // row 1 linear
+    [3,4],[3,5],        // fan-out down
+    [4,6],[5,6],        // converge to merge
+    [6,7],[7,8],[8,9],  // row 3 linear
+  ];
 
-      {steps.map((step, i) => {
-        const isActive = i <= activeStep;
-        const isFanOut = i === 3;
-        const x = isFanOut ? 200 : i === 4 ? 100 : i === 5 ? 300 : 50 + (i * 80);
-        const y = isFanOut ? 100 : i === 4 ? 160 : i === 5 ? 160 : 100;
+  function boxCenter(n) { return {cx: n.x + boxW/2, cy: n.y + boxH/2}; }
 
-        return (
-          <g key={i} className={`pipeline-step ${isActive ? 'active' : ''}`}>
-            <rect x={x} y={y} width={70} height={40} rx="6"
-                  fill={isActive ? '#0f766e' : '#e7e5e4'} stroke={isActive ? '#0f766e' : '#a8a29e'} strokeWidth="2"
-                  opacity={isActive ? 1 : 0.4}/>
-            <text x={x + 35} y={y + 18} textAnchor="middle" dominantBaseline="middle"
-                  fontSize="11" fontWeight="600" fill={isActive ? '#fff' : '#78716c'}>{step.label}</text>
-            {step.time && <text x={x + 35} y={y + 32} textAnchor="middle" dominantBaseline="middle"
-                  fontSize="9" fill={isActive ? '#fff' : '#a8a29e'}>{step.time}</text>}
+  return <div className="diagram" style={{overflowX:'auto'}}>
+    <svg width="720" height="260" viewBox="0 0 720 260" style={{fontFamily:'IBM Plex Sans,sans-serif'}}>
+      <text x="360" y="24" textAnchor="middle" fontSize="14" fontWeight="700" fill="#1c1917">Research Engine Pipeline</text>
 
-            {i < steps.length - 1 && i !== 3 && <line x1={x + 75} y1={y + 20} x2={x + 85} y2={y + 20}
-                  stroke={isActive ? '#0f766e' : '#a8a29e'} strokeWidth="2" markerEnd="url(#arrowSmall)"/>}
-          </g>
-        );
+      <defs>
+        <marker id="arrowSmall" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#0f766e"/>
+        </marker>
+        <marker id="arrowGray" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#a8a29e"/>
+        </marker>
+      </defs>
+
+      {arrows.map(([fi,ti], idx) => {
+        const f = nodes[fi], t = nodes[ti];
+        const fc = boxCenter(f), tc = boxCenter(t);
+        const lit = activeStep >= f.step && activeStep >= t.step;
+        // straight or vertical connection?
+        const sameRow = f.y === t.y;
+        if (sameRow) {
+          const x1 = f.x + boxW, y1 = fc.cy, x2 = t.x, y2 = tc.cy;
+          return <line key={idx} x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke={lit ? '#0f766e' : '#d1d5db'} strokeWidth={lit ? 2 : 1.5}
+            markerEnd={lit ? 'url(#arrowSmall)' : 'url(#arrowGray)'}
+            style={{transition:'all 0.3s'}}/>;
+        }
+        // vertical / diagonal
+        return <path key={idx}
+          d={`M ${fc.cx} ${f.y + boxH} L ${tc.cx} ${t.y}`}
+          stroke={lit ? '#0f766e' : '#d1d5db'} strokeWidth={lit ? 2 : 1.5} fill="none"
+          markerEnd={lit ? 'url(#arrowSmall)' : 'url(#arrowGray)'}
+          style={{transition:'all 0.3s'}}/>;
       })}
 
-      <defs><marker id="arrowSmall" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#0f766e"/></marker></defs>
+      {nodes.map((n, i) => {
+        const lit = activeStep >= n.step;
+        return <g key={i}>
+          <rect x={n.x} y={n.y} width={boxW} height={boxH} rx="6"
+            fill={lit ? '#0f766e' : '#f5f5f4'} stroke={lit ? '#0d6963' : '#d1d5db'} strokeWidth={lit ? 2 : 1.5}
+            style={{transition:'all 0.3s', filter: activeStep === n.step ? 'drop-shadow(0 0 6px rgba(15,118,110,0.45))' : 'none'}}/>
+          <text x={n.x + boxW/2} y={n.y + (n.time ? 13 : 18)} textAnchor="middle" dominantBaseline="middle"
+            fontSize="10.5" fontWeight="600" fill={lit ? '#fff' : '#78716c'}
+            style={{transition:'fill 0.3s'}}>{n.label}</text>
+          {n.time && <text x={n.x + boxW/2} y={n.y + 27} textAnchor="middle" dominantBaseline="middle"
+            fontSize="8.5" fill={lit ? 'rgba(255,255,255,0.75)' : '#a8a29e'}
+            style={{transition:'fill 0.3s'}}>{n.time}</text>}
+        </g>;
+      })}
+
+      {/* Parallel bracket annotation */}
+      <text x={30+3*(boxW+gap)+boxW/2} y={row2Y - 8} textAnchor="middle" fontSize="9" fill="#7c3aed" fontWeight="600">parallel</text>
     </svg>
-    <p style={{fontSize:'13px', color:'var(--text-muted)', marginTop:'12px', textAlign:'center'}}>Steps light up sequentially. Fan-out parallelizes Web + Docs searches.</p>
+    <p style={{fontSize:'13px', color:'var(--text-muted)', marginTop:'8px', textAlign:'center'}}>Steps light up sequentially. Search Orchestrator fans out to Web + Docs in parallel, then results merge.</p>
   </div>;
 }
 
@@ -595,8 +681,8 @@ function CircuitBreaker() {
       })}
 
       {transitions.map((t, i) => {
-        const fromIdx = states.findIndex(s => s.name.toLowerCase() === t.from);
-        const toIdx = states.findIndex(s => s.name.toLowerCase() === t.to);
+        const fromIdx = states.findIndex(s => s.name === t.from);
+        const toIdx = states.findIndex(s => s.name === t.to);
         const fromX = 100 + (fromIdx * 250);
         const toX = 100 + (toIdx * 250);
         const y = 150;
@@ -633,7 +719,7 @@ function StatsDashboard() {
 
   const stats = [
     {label:"Total Pages", value: animateIn ? 342 : 0},
-    {label:"Links", value: animateIn ? 1,247 : 0},
+    {label:"Links", value: animateIn ? 1247 : 0},
     {label:"Sources", value: animateIn ? 89 : 0},
   ];
 
