@@ -217,6 +217,10 @@ class WikiStore:
         for md_file in md_files:
             self._index_page_file(md_file)
 
+        # Rebuild FTS5 index to ensure content-sync consistency
+        cursor.execute("INSERT INTO pages_fts(pages_fts) VALUES('rebuild')")
+        self.db.commit()
+
         logger.info(f"Indexed {len(md_files)} pages")
 
     def _index_page_file(self, md_file: Path):

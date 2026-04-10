@@ -10,6 +10,7 @@ cited context block for LLM consumption. Citations use [[slug#section]] notation
 """
 
 import argparse
+import importlib.util
 import json
 import re
 import sys
@@ -77,11 +78,11 @@ def build_rag_context(
     sys.path.insert(0, str(Path(__file__).parent))
 
     # Use TF-IDF full-text search
-    spec = __import__("importlib").util.spec_from_file_location(
+    spec = importlib.util.spec_from_file_location(
         "search_fulltext",
         str(Path(__file__).parent / "search-fulltext.py"),
     )
-    mod = __import__("importlib").util.module_from_spec(spec)
+    mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     searcher = mod.WikiSearcher(str(pages_dir))
     results = searcher.search(question, top=top_k * 2)

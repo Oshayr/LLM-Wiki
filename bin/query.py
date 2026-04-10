@@ -431,6 +431,12 @@ def main():
     fq = FrontmatterQuery(args.pages_dir)
 
     if args.command == "exec":
+        # Auto-index if database is empty
+        conn = sqlite3.connect(fq.db_path)
+        count = conn.execute("SELECT COUNT(*) FROM page_meta").fetchone()[0]
+        conn.close()
+        if count == 0:
+            fq.index()
         results = fq.execute(args.query)
         print(json.dumps(results, indent=2))
 
@@ -440,6 +446,12 @@ def main():
         print(f"Indexed {stats['pages']} pages, {stats['fields']} fields")
 
     elif args.command == "fields":
+        # Auto-index if database is empty
+        conn = sqlite3.connect(fq.db_path)
+        count = conn.execute("SELECT COUNT(*) FROM page_meta").fetchone()[0]
+        conn.close()
+        if count == 0:
+            fq.index()
         results = fq.get_fields()
         print(json.dumps(results, indent=2))
 

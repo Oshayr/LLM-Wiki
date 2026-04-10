@@ -43,7 +43,7 @@
   "mcpServers": {
     "wiki-mcp": {
       "command": "python3",
-      "args": ["${PLUGIN_ROOT}/mcp/wiki-mcp-server.py"]
+      "args": ["${PLUGIN_ROOT}/mcp_server/wiki-mcp-server.py"]
     }
   }
 }
