@@ -1,40 +1,30 @@
 {
-  "name": "llm-wiki",
-  "version": "1.0.0",
-  "description": "LLM-powered personal wiki — autonomous knowledge base with research-on-miss, ingestion, search, a browsable web UI, and universal data gravity. Saves and retrieves knowledge automatically whenever relevant.",
+  "name": "llm-wiki-github",
+  "version": "0.1.0",
+  "description": "GitHub-Wiki-backed knowledge base for Claude Code. Stores every note in the target repository's wiki (git-backed), with autonomous ingest, cited reads, and research-on-miss.",
   "author": {
     "name": "Oshayr"
   },
-  "repository": "https://github.com/Oshayr/llm-wiki",
+  "repository": "https://github.com/Oshayr/llm-wiki-github",
   "license": "MIT",
   "keywords": [
     "wiki",
+    "github-wiki",
     "knowledge-base",
     "research",
     "llm",
-    "autonomous",
     "second-brain",
-    "obsidian",
     "claude-code"
   ],
   "agents": [
-    "agents/backlink-manager.md",
-    "agents/citation-explorer.md",
-    "agents/fact-checker.md",
-    "agents/research-loop.md",
-    "agents/research-processor.md",
-    "agents/search-channel.md",
-    "agents/search-orchestrator.md",
-    "agents/wiki-auditor.md",
+    "agents/wiki-writer.md",
     "agents/wiki-reader.md",
-    "agents/wiki-writer.md"
+    "agents/wiki-auditor.md"
   ],
   "skills": [
-    "skills/maintain/SKILL.md",
+    "skills/write/SKILL.md",
     "skills/read/SKILL.md",
-    "skills/serve/SKILL.md",
-    "skills/view/SKILL.md",
-    "skills/write/SKILL.md"
+    "skills/maintain/SKILL.md"
   ],
   "rules": [
     "rules/wiki-integration.md",

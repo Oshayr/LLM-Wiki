@@ -1,0 +1,24 @@
+# llm-wiki-github — example configuration.
+#
+# Copy this file to ${CLAUDE_PLUGIN_DATA}/config.yaml and uncomment the keys
+# you want to set. Any key left commented falls back to the default described
+# in the comment.
+#
+# Target resolution priority (highest first):
+#   1. env var  LLM_WIKI_TARGET=<owner>/<repo>
+#   2. this file's `owner:` / `repo:` keys
+#   3. autodetected from the current working directory's git origin remote
+
+# GitHub owner (user or organization) that owns the target repo.
+# owner: octocat
+
+# Name of the target repo. The wiki will be cloned from
+#   https://github.com/<owner>/<repo>.wiki.git
+# repo: hello-world
+
+# How long to trust the local clone before pulling again on reads (seconds).
+# Default: 300.
+# pull_ttl_seconds: 300
+
+# Override the cache directory. Default: ${CLAUDE_PLUGIN_DATA}/wiki-cache/
+# cache_dir: /custom/path/wiki-cache

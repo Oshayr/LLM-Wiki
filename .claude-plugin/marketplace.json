@@ -1,13 +1,13 @@
 {
-  "name": "llm-wiki",
+  "name": "llm-wiki-github",
   "owner": {
     "name": "Oshayr"
   },
   "plugins": [
     {
-      "name": "llm-wiki",
-      "description": "LLM-powered personal wiki — autonomous knowledge base with multi-channel research, ingestion, search, and a browsable web UI",
-      "version": "1.0.0",
+      "name": "llm-wiki-github",
+      "description": "GitHub-Wiki-backed knowledge base for Claude Code — stores every note in the target repo's GitHub Wiki (git-backed), with autonomous ingest, cited reads, and research-on-miss.",
+      "version": "0.1.0",
       "source": "./"
     }
   ]

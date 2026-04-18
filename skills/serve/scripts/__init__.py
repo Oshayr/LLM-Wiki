@@ -1,1 +1,0 @@
-# wiki-serve scripts package

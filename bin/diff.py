@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Structured diff tool for wiki page updates.
-Understands wiki page format (frontmatter + sections).
+Understands wiki page format (HTML-comment metadata + body sections).
 """
 
 import json
@@ -10,76 +10,43 @@ from pathlib import Path
 from typing import Any
 
 from wiki_logging import get_logger
+import frontmatter_fmt
 
 logger = get_logger(__name__)
 
 
-def parse_wiki_page(content: str) -> tuple[dict[str, str], dict[str, str]]:
+def parse_wiki_page(content: str) -> tuple[dict[str, Any], dict[str, str]]:
     """
-    Parse a wiki page into frontmatter dict and sections dict.
+    Parse a wiki page into metadata dict and sections dict.
 
     Returns:
-        (frontmatter_dict, sections_dict)
+        (metadata_dict, sections_dict)
     """
-    lines = content.split("\n")
-    frontmatter = {}
-    sections = {}
+    meta = frontmatter_fmt.parse(content)
+    body = frontmatter_fmt.strip_meta_block(content)
 
-    # Parse frontmatter (between --- markers)
-    if lines and lines[0].strip() == "---":
-        end_idx = 1
-        while end_idx < len(lines) and lines[end_idx].strip() != "---":
-            line = lines[end_idx].strip()
-            if ":" in line:
-                key, value = line.split(":", 1)
-                frontmatter[key.strip()] = value.strip()
-            end_idx += 1
+    sections: dict[str, str] = {}
+    current_section = None
+    current_content: list[str] = []
 
-        # Parse body sections
-        if end_idx < len(lines):
-            body_lines = lines[end_idx + 1 :]
-            current_section = None
-            current_content = []
-
-            for line in body_lines:
-                if line.startswith("## "):
-                    # Save previous section
-                    if current_section is not None:
-                        sections[current_section] = "\n".join(current_content).strip()
-                    # Start new section
-                    current_section = line[3:].strip()
-                    current_content = []
-                else:
-                    if current_section is not None:
-                        current_content.append(line)
-
-            # Save last section
+    for line in body.split("\n"):
+        if line.startswith("## "):
             if current_section is not None:
                 sections[current_section] = "\n".join(current_content).strip()
-    else:
-        # No frontmatter, treat entire content as one section
-        body_lines = lines
-        current_section = None
-        current_content = []
-
-        for line in body_lines:
-            if line.startswith("## "):
-                if current_section is not None:
-                    sections[current_section] = "\n".join(current_content).strip()
-                current_section = line[3:].strip()
-                current_content = []
+            current_section = line[3:].strip()
+            current_content = []
+        else:
+            if current_section is not None:
+                current_content.append(line)
             else:
-                if current_section is not None:
-                    current_content.append(line)
-                else:
-                    current_content.append(line)
+                current_content.append(line)
 
-        if current_section is not None:
-            sections[current_section] = "\n".join(current_content).strip()
-        elif current_content:
-            sections["_content"] = "\n".join(current_content).strip()
+    if current_section is not None:
+        sections[current_section] = "\n".join(current_content).strip()
+    elif current_content and any(l.strip() for l in current_content):
+        sections["_content"] = "\n".join(current_content).strip()
 
-    return frontmatter, sections
+    return meta, sections
 
 
 def extract_links(text: str) -> set:
@@ -94,9 +61,9 @@ def extract_links(text: str) -> set:
     return links
 
 
-def get_slug_from_frontmatter(frontmatter: dict[str, str]) -> str:
-    """Extract slug from frontmatter, defaulting to file slug if not present."""
-    return frontmatter.get("slug", "unknown")
+def get_slug_from_frontmatter(meta: dict[str, Any]) -> str:
+    """Extract slug from metadata, defaulting to 'unknown' if not present."""
+    return str(meta.get("slug", "unknown"))
 
 
 def count_line_changes(old_text: str, new_text: str) -> tuple[int, int]:

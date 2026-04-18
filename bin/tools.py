@@ -97,10 +97,12 @@ def cmd_dedup(args):
 def cmd_similar(args):
     """Find similar pages using TF-IDF-like token overlap.
 
-    Reads all .md files in the pages directory and compares against the query slug.
+    Reads all .md files flat in the pages directory and compares against the query slug.
     """
+    from slug_title import filename_to_slug
+
     slug = args.slug
-    pages_dir = Path(args.pages_dir)
+    pages_dir = Path(args.pages_dir) if args.pages_dir else _default_pages_dir()
 
     slug_tokens = set(slug.replace("-", " ").replace("_", " ").lower().split())
     if not slug_tokens:
@@ -108,12 +110,16 @@ def cmd_similar(args):
         print(json.dumps({"match": None, "score": 0}))
         return
 
+    def _page_slugs():
+        for page_file in pages_dir.glob("*.md"):
+            if page_file.name.startswith("_") or page_file.name == "Home.md":
+                continue
+            yield filename_to_slug(page_file.name)
+
     best = None
     best_score = 0.0
-
-    for page_file in pages_dir.glob("*.md"):
-        page_slug = page_file.stem
-        if page_slug == slug or page_slug == "index":
+    for page_slug in _page_slugs():
+        if page_slug == slug:
             continue
         page_tokens = set(page_slug.replace("-", " ").replace("_", " ").lower().split())
         if not page_tokens:
@@ -127,11 +133,9 @@ def cmd_similar(args):
             best_score = score
             best = page_slug
 
-    # Check prefix containment too
     if best_score < 0.6:
-        for page_file in pages_dir.glob("*.md"):
-            ps = page_file.stem
-            if ps == slug or ps == "index":
+        for ps in _page_slugs():
+            if ps == slug:
                 continue
             if ps.startswith(slug) or slug.startswith(ps):
                 shorter = min(len(slug), len(ps))
@@ -148,11 +152,18 @@ def cmd_similar(args):
         print(json.dumps({"match": None, "score": round(best_score, 3)}))
 
 
+def _default_pages_dir() -> Path:
+    from wiki_repo import cache_path
+    return cache_path()
+
+
 def cmd_summarize(args):
     """Extract first meaningful paragraph from a wiki page as a summary.
 
     Saves tokens by pre-computing page summaries instead of sending full content to LLM.
     """
+    import frontmatter_fmt
+
     try:
         content = Path(args.file).read_text(encoding="utf-8", errors="replace")
     except Exception as e:
@@ -160,11 +171,7 @@ def cmd_summarize(args):
         print("(failed to read file)")
         return
 
-    # Strip frontmatter
-    if content.startswith("---"):
-        end = content.find("---", 3)
-        if end != -1:
-            content = content[end + 3 :].strip()
+    content = frontmatter_fmt.strip_meta_block(content)
 
     # Find first non-heading, non-empty paragraph
     lines = content.split("\n")
@@ -195,7 +202,7 @@ def main():
     )
     parser.add_argument("--top", type=int, default=20, help="Top N results (dedup)")
     parser.add_argument("--slug", default="", help="Slug to check similarity for")
-    parser.add_argument("--pages-dir", default=".wiki/pages", help="Pages directory")
+    parser.add_argument("--pages-dir", default="", help="Pages directory (default: wiki-cache of resolved target)")
     parser.add_argument("--file", default="", help="File path (summarize)")
 
     args = parser.parse_args()

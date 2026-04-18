@@ -1,21 +1,13 @@
 """
-Custom exception hierarchy for LLM-Wiki.
+Custom exception hierarchy for llm-wiki-github.
 
-All wiki-specific exceptions inherit from WikiError so callers can
-catch the whole family with a single `except WikiError`.
-
-Usage:
-    from exceptions import FetchError, CacheError, SearchError
-
-    try:
-        content = fetch_url(url)
-    except FetchError as e:
-        logger.error("Fetch failed", extra={"url": e.url, "reason": str(e)})
+All wiki-specific exceptions inherit from WikiError so callers can catch the
+whole family with a single `except WikiError`.
 """
 
 
 class WikiError(Exception):
-    """Base exception for all LLM-Wiki operations."""
+    """Base exception for all wiki operations."""
     pass
 
 
@@ -29,29 +21,6 @@ class FetchError(WikiError):
         super().__init__(message)
 
 
-class CircuitOpenError(WikiError):
-    """Call rejected because the circuit breaker is open for this endpoint."""
-    def __init__(self, endpoint: str, retry_after: float = 0):
-        self.endpoint = endpoint
-        self.retry_after = retry_after
-        super().__init__(f"Circuit open for {endpoint}, retry after {retry_after:.0f}s")
-
-
-# ── Cache ─────────────────────────────────────────────────────────────────────
-
-class CacheError(WikiError):
-    """Cache read/write failure."""
-    pass
-
-
-class CacheMissError(CacheError):
-    """Requested key not found in cache."""
-    def __init__(self, key: str, layer: str = ""):
-        self.key = key
-        self.layer = layer
-        super().__init__(f"Cache miss: {key}" + (f" (layer={layer})" if layer else ""))
-
-
 # ── Search ────────────────────────────────────────────────────────────────────
 
 class SearchError(WikiError):
@@ -59,17 +28,7 @@ class SearchError(WikiError):
     pass
 
 
-class IndexError(SearchError):
-    """Search index is missing or corrupt."""
-    pass
-
-
 # ── Wiki Data ─────────────────────────────────────────────────────────────────
-
-class WikiNotFoundError(WikiError):
-    """No .wiki/ directory found at the expected location."""
-    pass
-
 
 class PageNotFoundError(WikiError):
     """Requested wiki page slug does not exist."""
@@ -78,45 +37,35 @@ class PageNotFoundError(WikiError):
         super().__init__(f"Page not found: {slug}")
 
 
-class PageConflictError(WikiError):
-    """Write conflict — page was modified concurrently."""
-    def __init__(self, slug: str, message: str = ""):
-        self.slug = slug
-        super().__init__(message or f"Write conflict on {slug}")
-
-
 class FrontmatterError(WikiError):
-    """Invalid or missing YAML frontmatter in a wiki page."""
+    """Invalid or missing metadata in a wiki page."""
     def __init__(self, slug: str, field: str = "", message: str = ""):
         self.slug = slug
         self.field = field
-        super().__init__(message or f"Bad frontmatter in {slug}" + (f": missing {field}" if field else ""))
+        super().__init__(message or f"Bad metadata in {slug}" + (f": missing {field}" if field else ""))
 
 
-# ── Research ──────────────────────────────────────────────────────────────────
+# ── Git / Repo ────────────────────────────────────────────────────────────────
 
-class ResearchError(WikiError):
-    """Research pipeline failure."""
+class GitError(WikiError):
+    """A git subprocess failed."""
     pass
 
 
-class RateLimitError(ResearchError):
-    """External API rate limit exceeded."""
-    def __init__(self, service: str, retry_after: float = 0):
-        self.service = service
-        self.retry_after = retry_after
-        super().__init__(f"Rate limited by {service}" + (f", retry after {retry_after}s" if retry_after else ""))
+class WikiRepoError(WikiError):
+    """A failure in the git-wiki I/O chokepoint. Carries a shell exit code hint."""
+    def __init__(self, message: str, exit_code: int = 1):
+        self.exit_code = exit_code
+        super().__init__(message)
 
 
-class ProviderUnavailableError(ResearchError):
-    """External research provider is down or unreachable."""
-    def __init__(self, provider: str, reason: str = ""):
-        self.provider = provider
-        super().__init__(f"{provider} unavailable" + (f": {reason}" if reason else ""))
+class WikiPushConflictError(WikiRepoError):
+    """Push rejected — remote has advanced; caller should pull-rebase and retry."""
+    def __init__(self, slug: str, message: str = ""):
+        self.slug = slug
+        super().__init__(message or f"Push conflict on {slug}", exit_code=1)
 
 
-# ── Git ───────────────────────────────────────────────────────────────────────
-
-class GitError(WikiError):
-    """Git operation failed."""
+class WikiBootstrapRequired(WikiRepoError):
+    """The GitHub Wiki for the target repo has not been initialized yet."""
     pass

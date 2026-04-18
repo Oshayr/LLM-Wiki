@@ -1,30 +1,20 @@
 ---
 name: wiki-write
-description: "Add or update wiki content — autonomous ingest from URL, file, or text; autonomous update of existing pages. Auto-creates .wiki/ on first use. Use when: 'save to wiki', 'remember this', 'note this', 'store this', 'add to knowledge base', 'save findings', 'save research', 'save idea', 'write to wiki', 'ingest', 'add page', 'update page'."
+description: "Add or update pages on the target project's GitHub Wiki — autonomous ingest from URL/file/text, autonomous update of existing pages. Use when: 'save to wiki', 'remember this', 'note this', 'store this', 'add to knowledge base', 'save findings', 'save research', 'save idea', 'write to wiki', 'ingest', 'add page', 'update page'."
 ---
 
 # Wiki Write
 
-Add or update content in the wiki. Auto-creates `.wiki/` if it doesn't exist.
+Ingest content into the target repo's GitHub Wiki. Storage is the wiki itself — there is no local `.wiki/` directory; the plugin maintains a git clone under `${CLAUDE_PLUGIN_DATA}/wiki-cache/<owner>__<repo>/` behind the scenes.
 
-Resolve `.wiki/` from plugin install scope. Auto-create if missing.
+## Auto-clone
 
-## Auto-Init
+On first use, the plugin auto-clones the target's GitHub Wiki (`<owner>/<repo>.wiki.git`). If the wiki has not been initialized on GitHub yet, the tool exits with code `10` and instructs you to create the first page in the browser at `https://github.com/<owner>/<repo>/wiki` — GitHub requires this one-time bootstrap via the web UI.
 
-If `.wiki/` doesn't exist, create it automatically before proceeding:
-
-```
-.wiki/
-  pages/
-  index.md        (empty: "# Wiki Index\n\nNo pages yet.\n")
-  overview.md     (empty: "# Overview\n\nNo content yet.\n")
-  log.md          (empty: "# Activity Log\n")
-  SCHEMA.md       (evaluation rules — see below)
-  config.yaml     (empty)
-  cache/
-  raw/
-    web/ papers/ notes/ transcripts/ code/ feeds/ assets/
-```
+Target resolution (first match wins):
+1. Env var `LLM_WIKI_TARGET=<owner>/<repo>`
+2. `${CLAUDE_PLUGIN_DATA}/config.yaml` (`owner:` and `repo:`)
+3. Autodetected from the current git repo's `origin` remote
 
 ## Arguments
 
@@ -33,59 +23,45 @@ If `.wiki/` doesn't exist, create it automatically before proceeding:
 - **`/wiki-write "text..."`** — ingest pasted text
 - **`/wiki-write --batch <dir>`** — ingest all `.md` files in a directory
 - **`/wiki-write --update <slug>`** — update an existing page autonomously
-- **`/wiki-write --update <slug> <url>`** — update page with content from URL
-- **`/wiki-write --refresh-stale`** — find and refresh stale pages based on freshness tier
+- **`/wiki-write --update <slug> <url>`** — update with content from URL
+- **`/wiki-write --refresh-stale`** — find and refresh pages past their freshness tier TTL
 
-## Ingest (default — no `--update` flag)
+## Ingest (default)
 
 Launch the `wiki-writer` agent with `mode: ingest`:
-- Fetches content (via `bin/fetch.py` chain: cache → Jina → trafilatura → WebFetch)
-- Saves raw source to `.wiki/raw/`
-- Writes source summary page and entity/concept pages to `.wiki/pages/`
-- Runs backlink audit via `bin/backlinks.py update .wiki/pages`
-- Updates `.wiki/index.md`, `.wiki/overview.md`, `.wiki/log.md`
-- **No confirmation pause** — runs end-to-end autonomously
+- Fetches content via `bin/fetch.py` (Jina → trafilatura → WebFetch chain).
+- Compiles a source-summary page and any entity/concept pages.
+- Renders the HTML-comment metadata block via `frontmatter_fmt.render`.
+- Rewrites `![[slug]]` transclusions to plain `[[slug]]` links (GitHub Wiki native).
+- Pushes via `wiki_repo.write_page` — which pulls first, rebuilds `_Sidebar.md` / `_Footer.md`, commits with `Wiki-Agent:` / `Wiki-Page:` trailers, and pushes with rebase-on-conflict retry.
+- **No confirmation pause** — runs end-to-end autonomously.
 
-Report: pages written, pages updated, confidence assigned.
+Report: pages written, pages updated, confidence assigned, commit SHAs, and public wiki URLs.
 
 ## Update (`--update`)
 
-Launch the `wiki-writer` agent with `mode: update`:
-1. Reads current page
-2. Generates proposed changes
-3. Runs contradiction sweep against high-confidence pages
-4. Applies changes directly — same autonomous behavior as ingest
-5. Updates index.md and log.md
+Launch `wiki-writer` with `mode: update`:
+1. Reads current page via `wiki_repo.read_page`.
+2. Generates proposed changes.
+3. Runs a contradiction sweep against other high-confidence pages.
+4. Bumps `updated` metadata and writes back via `wiki_repo.write_page` — same autonomous push.
 
 ## Refresh Stale (`--refresh-stale`)
 
-Finds pages past their freshness tier TTL (see freshness tiers in `/wiki-maintain`).
-For each: searches for fresh sources → applies updates autonomously.
+Finds pages past their freshness tier TTL (see `/wiki-maintain` for tiers). For each, searches for fresh sources and applies an update autonomously.
 
 ## Batch (`--batch`)
 
-Sequentially ingest each file in the directory. Report progress.
+Sequentially ingests each `.md` file in the directory. Reports progress after each push.
 
 ## Custom Page Types
 
-Users can define custom page types by creating template files in `.wiki/templates/`. Each template is a markdown file with YAML frontmatter that defines default fields and placeholder content.
+Custom page templates ship with the plugin under `${CLAUDE_PLUGIN_ROOT}/templates/`. To add a template, drop a `.md` file into that directory with placeholder content (e.g. `{{title}}`, `{{date}}`, `{{created}}`, `{{updated}}`) — ingest uses it as the page skeleton when the caller requests `type: <template-name>`.
 
-**Creating a custom page type:**
+## Authentication
 
-1. Create a file in `.wiki/templates/<type-name>.md`
-2. Add YAML frontmatter with default fields (title, type, confidence, dates, custom fields)
-3. Add markdown body content with placeholders (e.g., `{{title}}`, `{{date}}`)
+Push uses your system `git` credentials:
+- If you've authenticated with `gh auth login`, the git credential helper picks it up transparently.
+- Otherwise configure an HTTPS token or SSH key for `github.com` as you would for any other repo.
 
-**Using a custom page type:**
-
-When using `/wiki-write` with `type: custom-type-name`, the write operation will:
-- Look for `.wiki/templates/custom-type-name.md`
-- Use the template's frontmatter and body as the page skeleton
-- Replace placeholders with actual values (dates, title, etc.)
-- Proceed with normal page creation
-
-**Placeholder variables:**
-- `{{title}}` — Page title
-- `{{date}}` — Current date (YYYY-MM-DD)
-- `{{created}}` — Creation timestamp (ISO 8601)
-- `{{updated}}` — Update timestamp (ISO 8601)
+No `GITHUB_TOKEN` env var is required.

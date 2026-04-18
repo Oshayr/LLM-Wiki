@@ -7,18 +7,8 @@ dist/
 build/
 *.egg
 
-# Wiki runtime data (user-specific, not part of the plugin)
-.wiki/
-.test-e2e/
-*.db
-*.db-journal
-*.db-wal
-*.db-shm
-
-# Models (downloaded at runtime)
-*.onnx
-*.bin
-models/
+# Local wiki clones (user-specific, not part of the plugin)
+wiki-cache/
 
 # Environment
 .env

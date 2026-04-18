@@ -18,6 +18,8 @@ from pathlib import Path
 
 from wiki_logging import get_logger
 from exceptions import SearchError
+import frontmatter_fmt
+from slug_title import filename_to_slug
 
 logger = get_logger(__name__)
 
@@ -119,14 +121,11 @@ class WikiSearcher:
         tokens = re.findall(r"[a-z0-9]+", text.lower())
         return [t for t in tokens if t not in self.STOP_WORDS and len(t) > 1]
 
-    def _extract_title(self, content: str) -> str:
-        """Extract title from frontmatter or first heading."""
-        # Try frontmatter
-        match = re.search(r"^---\s*\ntitle:\s*([^\n]+)", content, re.MULTILINE)
-        if match:
-            return match.group(1).strip()
+    def _extract_title(self, content: str, meta: dict) -> str:
+        """Extract title from metadata or first heading."""
+        if meta.get("title"):
+            return str(meta["title"]).strip()
 
-        # Try first H1
         match = re.search(r"^#\s+([^\n]+)", content, re.MULTILINE)
         if match:
             return match.group(1).strip()
@@ -134,16 +133,19 @@ class WikiSearcher:
         return ""
 
     def _index_pages(self):
-        """Build TF-IDF index from all .md files."""
-        # Collect all documents and tokens
+        """Build TF-IDF index from all .md files flat in the pages dir."""
         all_tokens = Counter()
 
-        for md_file in self.pages_dir.glob("**/*.md"):
-            slug = md_file.stem
+        for md_file in self.pages_dir.glob("*.md"):
+            if md_file.name.startswith("_") or md_file.name == "Home.md":
+                continue
+            slug = filename_to_slug(md_file.name)
             try:
-                content = md_file.read_text(encoding="utf-8")
+                raw = md_file.read_text(encoding="utf-8")
+                meta = frontmatter_fmt.parse(raw)
+                content = frontmatter_fmt.strip_meta_block(raw)
                 self.documents[slug] = content
-                self.titles[slug] = self._extract_title(content)
+                self.titles[slug] = self._extract_title(content, meta)
 
                 # Tokenize and count
                 tokens = self._tokenize(content)

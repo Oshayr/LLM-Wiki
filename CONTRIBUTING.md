@@ -1,53 +1,54 @@
-# Contributing to llm-wiki
+# Contributing to llm-wiki-github
 
 ## Ways to contribute
 
 - **Bug reports** — open an issue with steps to reproduce
 - **Feature requests** — open an issue describing the use case
-- **Pull requests** — bug fixes, new search channels, web UI improvements, new agent behaviors
+- **Pull requests** — bug fixes, better conflict recovery, richer page templates, new agent behaviors
 
 ## Development setup
 
 ```bash
-git clone https://github.com/Oshayr/llm-wiki
-cd llm-wiki
+git clone https://github.com/Oshayr/llm-wiki-github
+cd llm-wiki-github
 
-# Install core dependencies (web UI, MCP server)
-pip install -r requirements.txt
-
-# Optional: enhanced features
-pip install sentence-transformers numpy scikit-learn   # semantic search
-pip install trafilatura                                # fallback content extraction
+pip install -r requirements.txt      # just `mcp`
 ```
 
-Test a skill locally by installing the plugin into a Claude Code project:
+Test the plugin locally by installing it into a Claude Code project:
+
 ```bash
 claude plugin install ./
 ```
 
+End-to-end test against a real GitHub Wiki:
+
+```bash
+export LLM_WIKI_TARGET=<your-user>/<scratch-repo>
+python3 bin/wiki_repo.py resolve   # verify target resolution
+python3 bin/wiki_repo.py ensure    # clone the wiki
+python3 bin/wiki_repo.py sync      # pull + print HEAD
+```
+
 ## Project structure
 
-| Directory | Purpose |
-|-----------|---------|
-| `agents/` | Agent markdown specs (Claude reads these) |
-| `bin/` | 23 Python utility scripts called by agents |
-| `mcp/` | FastMCP server exposing wiki as MCP tools |
-| `rules/` | Always-on behavioral rules |
-| `skills/` | Slash-command skill definitions |
-| `skills/serve/scripts/` | FastAPI web server + Jinja2 templates |
-
-## Adding a search channel
-
-1. Create `bin/search-<channel>.py` following the pattern in `bin/search-academic.py`
-2. Add the channel to `CHANNEL_TTLS` in `bin/cache.py`
-3. Add a `### <channel>` section to `agents/search-channel.md`
-4. Add the channel to `agents/search-orchestrator.md`'s Fan Out list
+| Path | Purpose |
+|------|---------|
+| `agents/` | Sub-agent specs: `wiki-writer`, `wiki-reader`, `wiki-auditor`. |
+| `bin/wiki_repo.py` | Single chokepoint for git-wiki I/O. Never bypass it. |
+| `bin/frontmatter_fmt.py` | HTML-comment JSON metadata format. |
+| `bin/slug_title.py` | Slug ↔ Title-Case-Filename conversion. |
+| `bin/` (rest) | `tools.py`, `search-fulltext.py`, `diff.py`, `fetch.py`, plus `wiki_logging.py` and `exceptions.py`. |
+| `mcp_server/` | FastMCP server wrapping `wiki_repo`. |
+| `rules/` | Always-on behavioral rules. |
+| `skills/` | Slash-command skill definitions. |
+| `templates/` | Page skeletons for custom types. |
 
 ## Code style
 
-- Python 3.11+ syntax (`X | Y` unions, `match`, etc.)
-- stdlib-only for core scripts; optional heavy deps (numpy, torch) imported lazily
-- All search scripts output normalized JSON arrays to stdout
+- Python 3.11+ syntax (`X | Y` unions, `match`, etc.).
+- Stdlib-only for core scripts.
+- Everything that writes to the wiki goes through `wiki_repo.write_page` — no raw `git` shellouts outside that module.
 
 ## License
 
