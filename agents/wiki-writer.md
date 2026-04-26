@@ -53,9 +53,9 @@ Rewrite every `![[slug]]` (Obsidian-style transclusion) in the source to a plain
 
 <body — Summary, Key Takeaways with [[wiki-links]], Entities & Concepts, Open Questions — use [[Target|slug]] for explicit link-text>
 
-<!-- llm-wiki:meta
+<!-- wiki-meta
 {"title":"...","slug":"...","type":"source","confidence":"high","created":"...","updated":"...","sources":["..."],"related":["..."],"tags":["..."],"freshness_tier":"academic"}
-llm-wiki:end -->
+wiki-meta:end -->
 ```
 
 Build the string using `frontmatter_fmt.render(meta, body)` so the metadata block is always well-formed and stable.
@@ -102,7 +102,7 @@ Create the page if it does not exist yet (type: `log`, freshness_tier: `permanen
 
 ## Concurrency
 
-`wiki_repo` serializes writes across processes via `fcntl.flock` on the cache dir, and pulls + rebases on push conflict automatically. Do not implement your own locking.
+`wiki_repo` serializes writes across processes via the cross-platform advisory lock in `bin/file_lock.py` (fcntl on POSIX, msvcrt on Windows), and pulls + rebases on push conflict automatically. Do not implement your own locking.
 
 ## Rules
 - **Ingest mode: NEVER pause** — end-to-end autonomous.

@@ -5,7 +5,7 @@
 # in the comment.
 #
 # Target resolution priority (highest first):
-#   1. env var  LLM_WIKI_TARGET=<owner>/<repo>
+#   1. env var  WIKI_GITHUB_TARGET=<owner>/<repo>
 #   2. this file's `owner:` / `repo:` keys
 #   3. autodetected from the current working directory's git origin remote
 

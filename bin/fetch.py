@@ -19,7 +19,7 @@ import re
 import sys
 import urllib.error
 import urllib.request
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -256,7 +256,7 @@ def html_to_markdown(html_content):
 
 def create_metadata_header(url, method):
     """Create metadata header comment."""
-    now = datetime.now(UTC).isoformat() + "Z"
+    now = datetime.now(timezone.utc).isoformat() + "Z"
     return f"<!-- Source: {url} | Fetched: {now} | Method: {method} -->\n\n"
 
 

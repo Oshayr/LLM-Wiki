@@ -1,5 +1,5 @@
 """
-Custom exception hierarchy for llm-wiki-github.
+Custom exception hierarchy for the wiki-github plugin.
 
 All wiki-specific exceptions inherit from WikiError so callers can catch the
 whole family with a single `except WikiError`.

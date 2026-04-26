@@ -24,10 +24,15 @@ claude plugin install ./
 End-to-end test against a real GitHub Wiki:
 
 ```bash
-export LLM_WIKI_TARGET=<your-user>/<scratch-repo>
-python3 bin/wiki_repo.py resolve   # verify target resolution
-python3 bin/wiki_repo.py ensure    # clone the wiki
-python3 bin/wiki_repo.py sync      # pull + print HEAD
+# bash / zsh
+export WIKI_GITHUB_TARGET=<your-user>/<scratch-repo>
+
+# PowerShell
+# $env:WIKI_GITHUB_TARGET = "<your-user>/<scratch-repo>"
+
+python bin/wiki_repo.py resolve   # verify target resolution
+python bin/wiki_repo.py ensure    # clone the wiki
+python bin/wiki_repo.py sync      # pull + print HEAD
 ```
 
 ## Project structure

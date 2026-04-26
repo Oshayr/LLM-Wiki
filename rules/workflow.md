@@ -1,4 +1,6 @@
-# llm-wiki-github — Workflow Rules
+# Wiki Workflow Rules
+
+> Behavioral reference loaded by `wiki-writer`, `wiki-reader`, and `wiki-auditor`. Each agent reads this file for shared workflow context.
 
 ## Ingest behavior
 - Ingest is autonomous — never pause for user confirmation when creating new pages.
@@ -39,7 +41,7 @@ Resolution: explicit `freshness_tier:` > explicit `ttl:` > auto-classification f
 
 The plugin determines which GitHub Wiki to read/write using the following precedence:
 
-1. **Env var** `LLM_WIKI_TARGET=<owner>/<repo>` (highest priority — useful for scripting against a specific wiki).
+1. **Env var** `WIKI_GITHUB_TARGET=<owner>/<repo>` (highest priority — useful for scripting against a specific wiki).
 2. **Config file** `${CLAUDE_PLUGIN_DATA}/config.yaml` with `owner:` and `repo:` keys.
 3. **Autodetect** from the current working directory — parse `git remote get-url origin`, walking up to ancestor `.git/` directories if needed.
 

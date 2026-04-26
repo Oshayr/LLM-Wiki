@@ -1,6 +1,8 @@
-# llm-wiki-github — Integration Rules
+# Wiki Integration Rules
 
-Storage is the target repository's **GitHub Wiki** (`https://github.com/<owner>/<repo>/wiki`). The plugin maintains a local git clone of `<owner>/<repo>.wiki.git` under `${CLAUDE_PLUGIN_DATA}/wiki-cache/` as a read/write buffer. These rules apply to EVERY conversation where this plugin is active.
+> Behavioral reference for the `llm-wiki-github` plugin's agents and skills. The agent definitions cite this file to keep their system prompts focused.
+
+Storage is the target repository's **GitHub Wiki** (`https://github.com/<owner>/<repo>/wiki`). The plugin maintains a local git clone of `<owner>/<repo>.wiki.git` under `${CLAUDE_PLUGIN_DATA}/wiki-cache/` as a read/write buffer. These rules apply to every conversation where this plugin is active.
 
 ## WRITE to the wiki when:
 

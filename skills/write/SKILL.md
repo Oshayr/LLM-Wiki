@@ -12,7 +12,7 @@ Ingest content into the target repo's GitHub Wiki. Storage is the wiki itself â€
 On first use, the plugin auto-clones the target's GitHub Wiki (`<owner>/<repo>.wiki.git`). If the wiki has not been initialized on GitHub yet, the tool exits with code `10` and instructs you to create the first page in the browser at `https://github.com/<owner>/<repo>/wiki` â€” GitHub requires this one-time bootstrap via the web UI.
 
 Target resolution (first match wins):
-1. Env var `LLM_WIKI_TARGET=<owner>/<repo>`
+1. Env var `WIKI_GITHUB_TARGET=<owner>/<repo>`
 2. `${CLAUDE_PLUGIN_DATA}/config.yaml` (`owner:` and `repo:`)
 3. Autodetected from the current git repo's `origin` remote
 

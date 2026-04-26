@@ -6,9 +6,9 @@ Canonical page layout on disk (and as rendered on github.com/.../wiki/<Slug>):
 
     <body — sections, [[wiki links]], paragraphs...>
 
-    <!-- llm-wiki:meta
+    <!-- wiki-meta
     {"title":"...","slug":"...","type":"concept",...}
-    llm-wiki:end -->
+    wiki-meta:end -->
 
 The HTML-comment JSON block is the ONLY metadata format. It renders as invisible
 HTML comment on GitHub, keeps the page clean for readers, and every metadata
@@ -24,11 +24,11 @@ import re
 from typing import Any
 
 
-META_START = "<!-- llm-wiki:meta"
-META_END = "llm-wiki:end -->"
+META_START = "<!-- wiki-meta"
+META_END = "wiki-meta:end -->"
 
 _META_BLOCK_RE = re.compile(
-    r"<!--\s*llm-wiki:meta\s*\n(?P<json>.*?)\n\s*llm-wiki:end\s*-->",
+    r"<!--\s*wiki-meta\s*\n(?P<json>.*?)\n\s*wiki-meta:end\s*-->",
     re.DOTALL,
 )
 

@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "llm-wiki-github",
-      "description": "GitHub-Wiki-backed knowledge base for Claude Code — stores every note in the target repo's GitHub Wiki (git-backed), with autonomous ingest, cited reads, and research-on-miss.",
+      "description": "GitHub-Wiki-backed knowledge base for Claude — stores every note in the target repo's GitHub Wiki (git-backed), with autonomous ingest, cited reads, and research-on-miss.",
       "version": "0.1.0",
       "source": "./"
     }

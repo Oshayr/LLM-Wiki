@@ -3,7 +3,7 @@
 All reads and writes to the GitHub Wiki flow through this module. It handles:
 - Target (owner/repo) resolution from env, config, or git remote
 - Local clone of <owner>/<repo>.wiki.git under ${CLAUDE_PLUGIN_DATA}/wiki-cache/
-- File locking (fcntl) for cross-process safety
+- Cross-platform advisory file locking via bin/file_lock.flock
 - Pull-before-write, push-with-retry-rebase, commit attribution via trailers
 - Sidebar + footer auto-rebuild on every write
 
@@ -16,14 +16,11 @@ Exit codes (when raised via CLI entry points):
 
 from __future__ import annotations
 
-import fcntl
 import json
 import os
 import re
 import subprocess
-import threading
 import time
-from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -36,6 +33,7 @@ from exceptions import (
     WikiBootstrapRequired,
     GitError,
 )
+from file_lock import flock
 from slug_title import slug_to_filename, filename_to_slug, slug_to_wiki_url
 import frontmatter_fmt
 
@@ -54,8 +52,6 @@ FOOTER_FILENAME = "_Footer.md"
 _REMOTE_RE = re.compile(
     r"(?:git@github\.com[:/]|https?://github\.com/)(?P<owner>[^/]+)/(?P<repo>[^/.]+?)(?:\.git)?/?$"
 )
-
-_process_lock = threading.Lock()
 
 
 @dataclass(frozen=True)
@@ -162,13 +158,13 @@ def _target_from_config() -> Optional[Target]:
 def resolve_target() -> Target:
     """Resolve the target <owner>/<repo> using the documented precedence.
 
-    1. env LLM_WIKI_TARGET=owner/repo
+    1. env WIKI_GITHUB_TARGET=owner/repo
     2. ${CLAUDE_PLUGIN_DATA}/config.yaml with owner: / repo:
     3. Parse `git remote get-url origin` from CWD (walks up to .git ancestors)
 
     Raises WikiRepoError with exit-code hint 12 if unresolved.
     """
-    env = os.environ.get("LLM_WIKI_TARGET")
+    env = os.environ.get("WIKI_GITHUB_TARGET")
     if env and "/" in env:
         owner, repo = env.split("/", 1)
         if owner and repo:
@@ -183,7 +179,7 @@ def resolve_target() -> Target:
         return t
 
     raise WikiRepoError(
-        "No target wiki repository resolved. Set LLM_WIKI_TARGET=owner/repo, "
+        "No target wiki repository resolved. Set WIKI_GITHUB_TARGET=owner/repo, "
         "configure owner/repo in config.yaml, or run from a git repo whose "
         "origin points to github.com.",
         exit_code=EXIT_NO_TARGET,
@@ -193,19 +189,9 @@ def resolve_target() -> Target:
 # ── Locks ─────────────────────────────────────────────────────────────────────
 
 
-@contextmanager
 def _flock(target: Target, exclusive: bool):
-    path = _lock_path(target)
-    path.touch(exist_ok=True)
-    mode = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
-    with _process_lock:
-        fd = os.open(str(path), os.O_RDWR)
-        try:
-            fcntl.flock(fd, mode)
-            yield
-        finally:
-            fcntl.flock(fd, fcntl.LOCK_UN)
-            os.close(fd)
+    """Cross-platform advisory lock on the per-target lock file."""
+    return flock(_lock_path(target), exclusive=exclusive)
 
 
 # ── Git primitives ────────────────────────────────────────────────────────────

@@ -1,10 +1,10 @@
 # llm-wiki-github
 
-A Claude Code plugin that uses a project's **GitHub Wiki** as a persistent, git-backed knowledge base. Every page is a real wiki page on github.com, browsable by you and your team.
+A Claude plugin that uses a project's **GitHub Wiki** as a persistent, git-backed knowledge base. Every page is a real wiki page on github.com, browsable by you and your team. Works in Claude Code (CLI), the Claude desktop app, and any Claude surface that supports plugins.
 
 ```
-your repo on GitHub              the plugin                  Claude inside Claude Code
-──────────────────              ─────────────                ─────────────────────────
+your repo on GitHub              the plugin                  Claude
+──────────────────              ─────────────                ───────────────────────
 <owner>/<repo>.wiki.git  <────  bin/wiki_repo.py  <────  wiki-writer / wiki-reader / wiki-auditor
    (git-backed storage)         (clone, pull, push)       (skills: /wiki-write, /wiki-read, /wiki-maintain)
 ```
@@ -15,6 +15,7 @@ your repo on GitHub              the plugin                  Claude inside Claud
 - **No separate UI to maintain.** The GitHub Wiki itself is the browse surface. No local web server, no embedded DB.
 - **Claude does the writing.** `/wiki-write` compiles pages from URLs, files, or pasted text and pushes them. `/wiki-read` answers cited questions, and if the wiki doesn't know something it researches inline and ingests the findings.
 - **Autonomous by default.** Ingest and update run end-to-end without pausing for confirmation.
+- **Cross-platform.** Linux, macOS, and Windows; CLI or desktop.
 
 ## How it works
 
@@ -23,14 +24,22 @@ your repo on GitHub              the plugin                  Claude inside Claud
 3. Every read does a pull-if-stale (5 min TTL). Every write does a pull, writes the file, rebuilds `_Sidebar.md`, commits with `Wiki-Agent:` / `Wiki-Page:` trailers, and pushes with rebase-on-conflict retry.
 4. Page metadata is stored as an HTML-comment JSON block at the foot of each page — invisible on the rendered wiki, one-line diffs on edit.
 
+## Requirements
+
+- **Python 3.11+** with `python3` on `PATH`. Linux and macOS get this by default; Windows users should install from [python.org](https://www.python.org/downloads/) (3.11+ ships a `python3.exe` launcher) or the Microsoft Store. The MCP server is spawned as `python3` and cannot be invoked otherwise.
+- **`git`** on `PATH` — the plugin shells out to `git` for all wiki I/O.
+- A GitHub repository whose wiki you can push to.
+
+The first session-start runs `bin/bootstrap.py`, which idempotently installs anything in `requirements.txt` only when its hash has changed (currently just the `mcp` package). The hook tolerates `python3` not being found on its own and falls back to `python` and `py -3`; if all three fail, the session continues — but the MCP server will not start until `python3` is reachable.
+
 ## First-time setup
 
-1. **Install the plugin** via the Claude Code marketplace or by cloning this repo into your plugins directory.
+1. **Install the plugin** via the Claude plugin marketplace, or by adding this repo to your local marketplace and running `/plugin install llm-wiki-github`.
 2. **Ensure git can push to the target repo.** If you have `gh auth login`, git's credential helper picks it up; otherwise configure an HTTPS token or SSH key for `github.com` as normal. No `GITHUB_TOKEN` env var needed.
 3. **Create the first page on the GitHub Wiki in the browser.** GitHub requires this one-time bootstrap before `git clone <owner>/<repo>.wiki.git` will work. Go to `https://github.com/<owner>/<repo>/wiki`, click "Create the first page", save anything (a stub `# Home` is fine).
 4. **Point the plugin at your repo.** Any one of:
    - Run `/wiki-write` from a clone of the repo — autodetect from `git remote get-url origin`.
-   - `export LLM_WIKI_TARGET=<owner>/<repo>` in your shell.
+   - `export WIKI_GITHUB_TARGET=<owner>/<repo>` in your shell (`setx WIKI_GITHUB_TARGET <owner>/<repo>` on Windows).
    - Copy `config/default.yaml` to `${CLAUDE_PLUGIN_DATA}/config.yaml` and set `owner:` / `repo:`.
 5. **Try it.** `/wiki-write "note: Claude Code is an interactive agent..."` — check `https://github.com/<owner>/<repo>/wiki/Claude-Code` in a minute.
 
@@ -52,7 +61,7 @@ Under the hood these are served by three sub-agents — `wiki-writer`, `wiki-rea
 
 Target resolution priority (first match wins):
 
-1. `LLM_WIKI_TARGET=<owner>/<repo>` env var.
+1. `WIKI_GITHUB_TARGET=<owner>/<repo>` env var.
 2. `${CLAUDE_PLUGIN_DATA}/config.yaml` with `owner:` and `repo:`.
 3. Autodetected from the CWD's `git remote get-url origin`.
 
@@ -73,7 +82,7 @@ The plugin shells out to `git` — it does not implement its own GitHub auth. Th
 |---|---|---|
 | 10 | Wiki not initialized on GitHub | Create the first page in the browser at `https://github.com/<owner>/<repo>/wiki`. |
 | 11 | Network failure cloning/pushing | Retry; check GitHub status. |
-| 12 | No target repo configured | Set `LLM_WIKI_TARGET`, populate `config.yaml`, or run from a clone of the target repo. |
+| 12 | No target repo configured | Set `WIKI_GITHUB_TARGET`, populate `config.yaml`, or run from a clone of the target repo. |
 | 13 | Auth rejected | Re-check `git push <repo>.wiki.git`; refresh `gh auth login`. |
 
 ## Development layout
@@ -85,9 +94,10 @@ llm-wiki-github/
   bin/              wiki_repo.py  frontmatter_fmt.py  slug_title.py
                     tools.py  search-fulltext.py  diff.py
                     fetch.py  wiki_logging.py  exceptions.py
+                    file_lock.py  bootstrap.py
   config/default.yaml
   mcp_server/wiki-mcp-server.py
-  rules/{wiki-integration.md, workflow.md}
+  rules/{wiki-integration.md, workflow.md}     # behavioral reference for agents
   skills/{write,read,maintain}/SKILL.md
   templates/example-meeting-notes.md
   CONTRIBUTING.md  LICENSE  README.md  requirements.txt
@@ -95,8 +105,10 @@ llm-wiki-github/
 
 Critical-path modules:
 - `bin/wiki_repo.py` — the only place that ever touches git. Target resolution, clone, pull-if-stale, write+push, sidebar rebuild, attribution trailers.
+- `bin/file_lock.py` — cross-platform advisory locking (fcntl on POSIX, msvcrt on Windows).
 - `bin/frontmatter_fmt.py` — the HTML-comment JSON metadata contract.
 - `bin/slug_title.py` — deterministic slug ↔ Title-Case-Filename conversion.
+- `bin/bootstrap.py` — idempotent dependency install for the SessionStart hook.
 
 ## License
 

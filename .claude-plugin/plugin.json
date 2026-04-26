@@ -1,10 +1,11 @@
 {
   "name": "llm-wiki-github",
   "version": "0.1.0",
-  "description": "GitHub-Wiki-backed knowledge base for Claude Code. Stores every note in the target repository's wiki (git-backed), with autonomous ingest, cited reads, and research-on-miss.",
+  "description": "GitHub-Wiki-backed knowledge base for Claude. Stores every note in the target repository's wiki (git-backed), with autonomous ingest, cited reads, and research-on-miss.",
   "author": {
     "name": "Oshayr"
   },
+  "homepage": "https://github.com/Oshayr/llm-wiki-github",
   "repository": "https://github.com/Oshayr/llm-wiki-github",
   "license": "MIT",
   "keywords": [
@@ -26,17 +27,13 @@
     "skills/read/SKILL.md",
     "skills/maintain/SKILL.md"
   ],
-  "rules": [
-    "rules/wiki-integration.md",
-    "rules/workflow.md"
-  ],
   "hooks": {
     "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "diff -q \"${CLAUDE_PLUGIN_ROOT}/requirements.txt\" \"${CLAUDE_PLUGIN_DATA}/requirements.txt\" >/dev/null 2>&1 || (cp \"${CLAUDE_PLUGIN_ROOT}/requirements.txt\" \"${CLAUDE_PLUGIN_DATA}/requirements.txt\" && pip install -q -r \"${CLAUDE_PLUGIN_DATA}/requirements.txt\") || rm -f \"${CLAUDE_PLUGIN_DATA}/requirements.txt\""
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/bin/bootstrap.py\" || python \"${CLAUDE_PLUGIN_ROOT}/bin/bootstrap.py\" || py -3 \"${CLAUDE_PLUGIN_ROOT}/bin/bootstrap.py\""
           }
         ]
       }
@@ -45,7 +42,7 @@
   "mcpServers": {
     "wiki-mcp": {
       "command": "python3",
-      "args": ["${PLUGIN_ROOT}/mcp_server/wiki-mcp-server.py"]
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp_server/wiki-mcp-server.py"]
     }
   }
 }
